@@ -1,0 +1,5 @@
+# Ensure consistent line endings
+*.py text eol=lf
+
+# Sort migration files by revision order
+alembic/versions/*.py sort

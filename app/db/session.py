@@ -25,11 +25,17 @@ try:
     # Create base class for models
     Base = declarative_base()
     
-    # Test database connection
-    with engine.connect() as connection:
-        logger.info("Successfully connected to the database")
+        # Test database connection - only when explicitly called
+    def test_connection():
+        try:
+            with engine.connect() as connection:
+                logger.info("Successfully connected to the database")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to connect to the database: {str(e)}")
+            return False
 except Exception as e:
-    logger.error(f"Failed to connect to the database: {str(e)}")
+    logger.error(f"Failed to create database engine: {str(e)}")
     raise
 
 def get_db():

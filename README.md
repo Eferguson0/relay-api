@@ -165,7 +165,36 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ### Database Migrations
 
-The application uses Alembic for database migrations. Migrations are automatically run when the application starts. To manually manage migrations:
+The application uses Alembic for database migrations. Migrations are automatically run when the application starts.
+
+#### Local Development (Outside Docker)
+
+For local development, you can run Alembic commands directly:
+
+```bash
+# Set the database URL for local development
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/supahealth"
+
+# Create a new migration
+uv run alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations
+uv run alembic upgrade head
+
+# Check current migration status
+uv run alembic current
+
+# Rollback one migration
+uv run alembic downgrade -1
+
+# Rollback to a specific revision
+uv run alembic downgrade <revision_id>
+
+# Rollback to base (remove all migrations)
+uv run alembic downgrade base
+```
+
+#### Docker Environment
 
 ```bash
 # Create a new migration
@@ -174,8 +203,66 @@ docker compose exec app alembic revision --autogenerate -m "Description of chang
 # Apply migrations
 docker compose exec app alembic upgrade head
 
+# Check current migration status
+docker compose exec app alembic current
+
 # Rollback one migration
 docker compose exec app alembic downgrade -1
+```
+
+#### Handling Deleted Migration Files
+
+If you delete a migration file and the database still references it, you'll get an error like:
+```
+ERROR [alembic.util.messaging] Can't locate revision identified by 'abc123def456'
+```
+
+
+**Solution 1: Fresh Database (Deletes All Data)**
+```bash
+# Stop and remove everything including volumes
+docker compose down -v
+
+# Start fresh
+docker compose up -d postgres
+
+# Apply migrations
+uv run alembic upgrade head
+```
+
+**Solution 2: Downgrade to Known Good Revision**
+```bash
+# Downgrade to the last known good revision
+uv run alembic downgrade <known_good_revision_id>
+
+# Then create new migration
+uv run alembic revision --autogenerate -m "new_migration"
+uv run alembic upgrade head
+```
+
+#### Migration Best Practices
+
+1. **Always backup your database** before running migrations in production
+2. **Test migrations** on a copy of your production data first
+3. **Review generated migrations** before applying them
+4. **Use descriptive migration names** that explain what changed
+5. **Never delete migration files** that have been applied to production
+6. **Keep migrations small and focused** on single changes when possible
+
+#### Common Migration Commands
+
+```bash
+# List all migrations
+uv run alembic history
+
+# Show migration details
+uv run alembic show <revision_id>
+
+# Mark database as up-to-date without running migrations
+uv run alembic stamp head
+
+# Create empty migration (no autogenerate)
+uv run alembic revision -m "manual_migration"
 ```
 
 ### API Endpoints
