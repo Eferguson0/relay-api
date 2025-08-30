@@ -99,6 +99,13 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """Handle chat messages"""
+    from datetime import datetime
+    
+    # Log the incoming chat request with timestamp
+    timestamp = datetime.now().isoformat()
+    logger.info(f"[{timestamp}] New chat message received - Length: {len(request.message)} characters")
+    logger.debug(f"[{timestamp}] Chat message content: {request.message[:100]}{'...' if len(request.message) > 100 else ''}")
+    
     try:
         messages = [
             {
@@ -107,10 +114,19 @@ async def chat(request: ChatRequest):
             },
             {"role": "user", "content": request.message}
         ]
+        
+        # Log that we're calling OpenAI
+        logger.info(f"[{timestamp}] Calling OpenAI API for chat completion")
+        
         response = await get_chat_completion(messages)
+        
+        # Log successful response
+        logger.info(f"[{timestamp}] Chat response generated successfully - Length: {len(response)} characters")
+        logger.debug(f"[{timestamp}] Chat response content: {response[:100]}{'...' if len(response) > 100 else ''}")
+        
         return {"response": response}
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
+        logger.error(f"[{timestamp}] Error in chat endpoint: {str(e)}")
         return {"error": str(e)}
 
 @app.get("/api/health")
@@ -118,7 +134,8 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "version": "1.0.0"}
 
-app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+# Commented out static files mounting since frontend/dist doesn't exist
+# app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

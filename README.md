@@ -27,7 +27,17 @@ git clone <repository-url>
 cd SupaHealth-Server
 ```
 
-2. Create a `.env` file in the project root:
+2. Set up the Python environment:
+```bash
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate
+
+# Install dependencies
+uv pip install -e .
+```
+
+3. Create a `.env` file in the project root:
 ```bash
 # Create .env file
 touch .env
@@ -53,16 +63,30 @@ VERSION=1.0.0
 BACKEND_CORS_ORIGINS=["*"]  # Update with specific origins in production
 ```
 
-3. Start the application:
+4. Start the application:
 ```bash
 # Build and start the containers
 docker compose up --build
 ```
 
-4. Access the applicatio:n
+5. Access the application:
 - Backend API: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
 - Database: localhost:5432
+
+### IDE Setup
+
+For the best development experience, configure your IDE to use the virtual environment:
+
+**VS Code/Cursor:**
+- Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
+- Type "Python: Select Interpreter"
+- Choose `.venv/bin/python` from the list
+
+**PyCharm:**
+- Go to Settings > Project > Python Interpreter
+- Add Interpreter > Existing Environment
+- Browse to `.venv/bin/python`
 
 ## Development
 
