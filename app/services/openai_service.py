@@ -26,13 +26,31 @@ async def get_chat_completion(messages: list, model: str = "gpt-3.5-turbo"):
         str: The completion text
     """
     try:
+        from datetime import datetime
+        
+        # Log the API call details
+        timestamp = datetime.now().isoformat()
+        user_message = next((msg["content"] for msg in messages if msg["role"] == "user"), "No user message found")
+        logger.info(f"[{timestamp}] Making OpenAI API call - Model: {model}, User message length: {len(user_message)} characters")
+        
         response = await client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.7,
             max_tokens=1000
         )
-        return response.choices[0].message.content
+        
+        # Log successful API response
+        response_content = response.choices[0].message.content
+        logger.info(f"[{timestamp}] OpenAI API call successful - Response length: {len(response_content)} characters")
+        
+        # Log usage information if available
+        if hasattr(response, 'usage') and response.usage:
+            logger.info(f"[{timestamp}] OpenAI API usage - Prompt tokens: {response.usage.prompt_tokens}, "
+                       f"Completion tokens: {response.usage.completion_tokens}, "
+                       f"Total tokens: {response.usage.total_tokens}")
+        
+        return response_content
     except Exception as e:
         logger.error(f"Error getting chat completion: {str(e)}")
         raise Exception(f"Error getting chat completion: {str(e)}") 
