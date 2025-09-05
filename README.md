@@ -265,14 +265,6 @@ uv run alembic stamp head
 uv run alembic revision -m "manual_migration"
 ```
 
-### API Endpoints
-
-The main API endpoints include:
-
-- `POST /api/auth/signin`: User authentication
-- `POST /api/auth/signup`: User registration
-- `POST /api/chat`: Chat with AI assistant
-- `GET /api/health`: Health check endpoint
 
 ### Troubleshooting
 

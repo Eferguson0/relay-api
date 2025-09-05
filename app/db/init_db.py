@@ -1,12 +1,14 @@
-from sqlalchemy.orm import Session
-from app.db.session import Base, engine
-from app.models.models import User, Conversation, Message
-from app.core.config import settings
-from app.services.auth_service import get_password_hash
 import logging
+
+from sqlalchemy.orm import Session
+
+from app.db.session import Base, engine
+from app.models.user import User
+from app.services.auth_service import get_password_hash
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def init_db() -> None:
     """
@@ -19,6 +21,7 @@ def init_db() -> None:
     except Exception as e:
         logger.error(f"Error creating database tables: {str(e)}")
         raise
+
 
 def create_first_superuser(db: Session) -> None:
     """
@@ -34,7 +37,7 @@ def create_first_superuser(db: Session) -> None:
                 hashed_password=get_password_hash("admin"),
                 full_name="Admin User",
                 is_superuser=True,
-                is_active=True
+                is_active=True,
             )
             db.add(superuser)
             db.commit()
@@ -43,8 +46,9 @@ def create_first_superuser(db: Session) -> None:
         logger.error(f"Error creating first superuser: {str(e)}")
         raise
 
+
 if __name__ == "__main__":
     logger.info("Creating initial data")
     init_db()
     # Note: create_first_superuser requires a database session
-    # It should be called from your application startup code 
+    # It should be called from your application startup code

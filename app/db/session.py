@@ -1,8 +1,10 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from app.core.config import settings
 import logging
+
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+from app.core.config import settings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -16,16 +18,16 @@ try:
         pool_size=20,  # Increased pool size for better concurrency
         max_overflow=30,  # Increased max overflow
         pool_timeout=30,  # Add timeout setting
-        pool_recycle=1800  # Recycle connections every 30 minutes
+        pool_recycle=1800,  # Recycle connections every 30 minutes
     )
-    
+
     # Create session factory
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    
+
     # Create base class for models
     Base = declarative_base()
-    
-        # Test database connection - only when explicitly called
+
+    # Test database connection - only when explicitly called
     def test_connection():
         try:
             with engine.connect() as connection:
@@ -34,9 +36,11 @@ try:
         except Exception as e:
             logger.error(f"Failed to connect to the database: {str(e)}")
             return False
+
 except Exception as e:
     logger.error(f"Failed to create database engine: {str(e)}")
     raise
+
 
 def get_db():
     """
@@ -47,4 +51,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
