@@ -1,36 +1,28 @@
 import logging
-import secrets
-import string
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.diet import Diet
 from app.models.user import User
 from app.schemas.diet import (
-    DietIngestRequest,
-    DietIngestResponse,
-    DietExportResponse,
-    DietRecordCreate,
-    DietRecordResponse,
     DailyAggregationResponse,
     DietDeleteResponse,
+    DietExportResponse,
+    DietIngestRequest,
+    DietIngestResponse,
+    DietRecordCreate,
+    DietRecordResponse,
 )
 from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["diet"])
-
-
-def generate_diet_id() -> str:
-    """Generate a random string ID for diet records"""
-    # Generate a 12-character random string with letters and numbers
-    alphabet = string.ascii_letters + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(12))
 
 
 @router.post("/ingest-diet", response_model=DietIngestResponse)
@@ -61,8 +53,8 @@ async def ingest_diet_data(
 
                 # Create new diet record
                 new_record = Diet(
-                    id=generate_diet_id(),
-                    user_email=user.email,
+                    id=generate_rid("diet"),
+                    user_id=user.id,
                     datetime=meal_datetime,
                     protein=data_point.protein,
                     carbs=data_point.carbs,
@@ -98,7 +90,7 @@ async def ingest_diet_data(
         return DietIngestResponse(
             message="Diet data ingested successfully",
             records_processed=inserted_records,
-            user_email=user.email,
+            user_id=user.id,
             total_calories=total_calories if total_calories > 0 else None,
             total_protein=total_protein if total_protein > 0 else None,
             total_carbs=total_carbs if total_carbs > 0 else None,
@@ -125,7 +117,7 @@ async def get_diet_data(
     """Get diet/macro records with optional filtering"""
     try:
         # Only show data for the authenticated user (security)
-        query = db.query(Diet).filter(Diet.user_email == current_user.email)
+        query = db.query(Diet).filter(Diet.user_id == current_user.id)
 
         # Filter by date range if provided
         if start_date:
@@ -180,8 +172,8 @@ async def add_diet_record(
 
         # Create new diet record
         new_record = Diet(
-            id=generate_diet_id(),
-            user_email=current_user.email,
+            id=generate_rid("diet"),
+            user_id=current_user.id,
             datetime=meal_datetime,
             protein=record_data.protein,
             carbs=record_data.carbs,
@@ -194,7 +186,7 @@ async def add_diet_record(
         db.commit()
         db.refresh(new_record)
 
-        logger.info(f"Added diet record for {current_user.email} at {meal_datetime}")
+        logger.info(f"Added diet record for {current_user.id} at {meal_datetime}")
         return new_record
 
     except Exception as e:
@@ -217,7 +209,7 @@ async def delete_diet_record(
         # Find the record and ensure it belongs to the current user
         record = (
             db.query(Diet)
-            .filter(Diet.id == record_id, Diet.user_email == current_user.email)
+            .filter(Diet.id == record_id, Diet.user_id == current_user.id)
             .first()
         )
 
@@ -230,7 +222,7 @@ async def delete_diet_record(
         db.delete(record)
         db.commit()
 
-        logger.info(f"Deleted diet record {record_id} for user {current_user.email}")
+        logger.info(f"Deleted diet record {record_id} for user {current_user.id}")
         return DietDeleteResponse(
             message="Record deleted successfully", deleted_count=1
         )
@@ -263,7 +255,7 @@ async def get_daily_diet_records(
         records = (
             db.query(Diet)
             .filter(
-                Diet.user_email == current_user.email,
+                Diet.user_id == current_user.id,
                 Diet.datetime >= start_datetime,
                 Diet.datetime <= end_datetime,
             )
@@ -315,7 +307,7 @@ async def get_diet_aggregations(
 ):
     """Get aggregated diet records by day"""
     try:
-        query = db.query(Diet).filter(Diet.user_email == current_user.email)
+        query = db.query(Diet).filter(Diet.user_id == current_user.id)
 
         # Apply date filters if provided
         if start_date:

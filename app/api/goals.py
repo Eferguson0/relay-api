@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -32,9 +31,7 @@ async def create_goal_weight(
     try:
         # Check if user already has a weight goal
         existing_goal = (
-            db.query(GoalWeight)
-            .filter(GoalWeight.user_email == current_user.email)
-            .first()
+            db.query(GoalWeight).filter(GoalWeight.user_id == current_user.id).first()
         )
 
         if existing_goal:
@@ -45,7 +42,7 @@ async def create_goal_weight(
 
         # Create new goal weight record
         new_goal = GoalWeight(
-            user_email=current_user.email,
+            user_id=current_user.id,
             weight=goal_data.weight,
             body_fat_percentage=goal_data.body_fat_percentage,
             muscle_mass_percentage=goal_data.muscle_mass_percentage,
@@ -54,7 +51,7 @@ async def create_goal_weight(
         db.commit()
         db.refresh(new_goal)
 
-        logger.info(f"Created weight goal for {current_user.email}")
+        logger.info(f"Created weight goal for {current_user.id}")
         return GoalWeightCreateResponse(
             message="Weight goal created successfully", goal=new_goal
         )
@@ -78,9 +75,7 @@ async def get_goal_weight(
     """Get current user's weight goal"""
     try:
         goal = (
-            db.query(GoalWeight)
-            .filter(GoalWeight.user_email == current_user.email)
-            .first()
+            db.query(GoalWeight).filter(GoalWeight.user_id == current_user.id).first()
         )
 
         if not goal:
@@ -89,7 +84,7 @@ async def get_goal_weight(
                 detail="No weight goal found for user",
             )
 
-        logger.info(f"Retrieved weight goal for {current_user.email}")
+        logger.info(f"Retrieved weight goal for {current_user.id}")
         return goal
 
     except HTTPException:
@@ -112,9 +107,7 @@ async def update_goal_weight(
     try:
         # Find existing goal
         goal = (
-            db.query(GoalWeight)
-            .filter(GoalWeight.user_email == current_user.email)
-            .first()
+            db.query(GoalWeight).filter(GoalWeight.user_id == current_user.id).first()
         )
 
         if not goal:
@@ -134,7 +127,7 @@ async def update_goal_weight(
         db.commit()
         db.refresh(goal)
 
-        logger.info(f"Updated weight goal for {current_user.email}")
+        logger.info(f"Updated weight goal for {current_user.id}")
         return GoalWeightUpdateResponse(
             message="Weight goal updated successfully", goal=goal
         )
@@ -159,9 +152,7 @@ async def delete_goal_weight(
     try:
         # Find and delete the goal
         goal = (
-            db.query(GoalWeight)
-            .filter(GoalWeight.user_email == current_user.email)
-            .first()
+            db.query(GoalWeight).filter(GoalWeight.user_id == current_user.id).first()
         )
 
         if not goal:
@@ -173,7 +164,7 @@ async def delete_goal_weight(
         db.delete(goal)
         db.commit()
 
-        logger.info(f"Deleted weight goal for {current_user.email}")
+        logger.info(f"Deleted weight goal for {current_user.id}")
         return GoalWeightDeleteResponse(
             message="Weight goal deleted successfully", deleted_count=1
         )

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -84,7 +85,7 @@ async def ingest_heart_rate_data(
                 existing_record = (
                     db.query(HourlyHeartRate)
                     .filter(
-                        HourlyHeartRate.user_email == user.email,
+                        HourlyHeartRate.user_id == user.id,
                         HourlyHeartRate.date == activity_datetime,
                         HourlyHeartRate.source == source,
                     )
@@ -109,7 +110,7 @@ async def ingest_heart_rate_data(
                 else:
                     # Create new record
                     new_record = HourlyHeartRate(
-                        user_email=user.email,
+                        user_id=user.id,
                         date=activity_datetime,
                         min_hr=min_hr,
                         avg_hr=avg_hr,
@@ -134,7 +135,7 @@ async def ingest_heart_rate_data(
             message="Heart rate data ingested successfully",
             records_processed=inserted_records,
             metrics_processed=processed_metrics,
-            user_email=user.email,
+            user_id=user.id,
             source="POST request",
         )
 
@@ -144,4 +145,56 @@ async def ingest_heart_rate_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error ingesting data: {str(e)}",
+        )
+
+
+@router.get("/heart-rate")
+async def get_heart_rate_data(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get hourly heart rate records with optional filtering"""
+    try:
+        # Only show data for the authenticated user (security)
+        query = db.query(HourlyHeartRate).filter(
+            HourlyHeartRate.user_id == current_user.id
+        )
+
+        # Filter by date range if provided
+        if start_date:
+            query = query.filter(HourlyHeartRate.date >= start_date)
+        if end_date:
+            query = query.filter(HourlyHeartRate.date <= end_date)
+
+        # Order by date descending
+        query = query.order_by(HourlyHeartRate.date.desc())
+
+        records = query.all()
+
+        return {
+            "records": [
+                {
+                    "user_id": record.user_id,
+                    "date": record.date.isoformat(),
+                    "min_hr": record.min_hr,
+                    "avg_hr": float(record.avg_hr) if record.avg_hr else None,
+                    "max_hr": record.max_hr,
+                    "source": record.source,
+                    "created_at": record.created_at.isoformat(),
+                    "updated_at": (
+                        record.updated_at.isoformat() if record.updated_at else None
+                    ),
+                }
+                for record in records
+            ],
+            "total_count": len(records),
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching heart rate records: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching data: {str(e)}",
         )

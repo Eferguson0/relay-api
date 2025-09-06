@@ -5,9 +5,9 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Numeric,
+    PrimaryKeyConstraint,
     String,
     Text,
-    PrimaryKeyConstraint,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -18,7 +18,7 @@ from app.db.session import Base
 class HourlyHeartRate(Base):
     __tablename__ = "hourly_heart_rate"
 
-    user_email = Column(String, ForeignKey("users.email"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     date = Column(
         DateTime(timezone=True), nullable=False
     )  # Store full datetime for hourly data
@@ -31,7 +31,7 @@ class HourlyHeartRate(Base):
 
     # Primary key constraint and check constraints
     __table_args__ = (
-        PrimaryKeyConstraint("user_email", "date", "source"),
+        PrimaryKeyConstraint("user_id", "date", "source"),
         CheckConstraint(
             "min_hr IS NULL OR (min_hr >= 0 AND min_hr <= 300)",
             name="hourly_heart_rate_min_hr_check",

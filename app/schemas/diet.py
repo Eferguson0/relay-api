@@ -27,7 +27,7 @@ class DietIngestRequest(BaseModel):
 class DietIngestResponse(BaseModel):
     message: str
     records_processed: int
-    user_email: str
+    user_id: str
     total_calories: Optional[float] = None
     total_protein: Optional[float] = None
     total_carbs: Optional[float] = None
@@ -37,7 +37,7 @@ class DietIngestResponse(BaseModel):
 # Diet Export Response Schema
 class DietRecord(BaseModel):
     id: str
-    user_email: str
+    user_id: str
     datetime: datetime
     protein: Optional[float]
     carbs: Optional[float]
@@ -76,7 +76,7 @@ class DietRecordCreate(BaseModel):
 
 class DietRecordResponse(BaseModel):
     id: str
-    user_email: str
+    user_id: str
     datetime: datetime
     protein: Optional[float]
     carbs: Optional[float]

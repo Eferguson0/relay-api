@@ -30,7 +30,7 @@ class GoalWeightUpdate(BaseModel):
 
 
 class GoalWeightResponse(BaseModel):
-    user_email: str
+    user_id: str
     weight: Optional[float]
     body_fat_percentage: Optional[float]
     muscle_mass_percentage: Optional[float]
@@ -81,7 +81,7 @@ class GoalDailyDietUpdate(BaseModel):
 
 
 class GoalDailyDietResponse(BaseModel):
-    user_email: str
+    user_id: str
     calories: Optional[float]
     protein: Optional[float]
     carbs: Optional[float]
@@ -119,7 +119,7 @@ class GoalMessageUpdate(BaseModel):
 
 
 class GoalMessageResponse(BaseModel):
-    user_email: str
+    user_id: str
     goal_message: str
     created_at: datetime
     updated_at: Optional[datetime]

@@ -6,6 +6,7 @@ from .goals import GoalDailyDiet, GoalMessage, GoalWeight
 from .heart_rate import HourlyHeartRate
 from .user import User
 from .weight import Weight
+from .workout import ActiveCalories, HourlySteps
 
 # This ensures all models are imported and registered with Base.metadata
 __all__ = [
@@ -16,4 +17,6 @@ __all__ = [
     "GoalDailyDiet",
     "GoalMessage",
     "Weight",
+    "ActiveCalories",
+    "HourlySteps",
 ]

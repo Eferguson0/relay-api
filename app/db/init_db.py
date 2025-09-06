@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
+from app.core.rid import generate_rid
 from app.db.session import Base, engine
 from app.models.user import User
 from app.services.auth_service import get_password_hash
@@ -31,8 +32,10 @@ def create_first_superuser(db: Session) -> None:
         # Check if any user exists
         user = db.query(User).first()
         if not user:
-            # Create superuser
+            # Create superuser with RID
+            user_id = generate_rid("user")
             superuser = User(
+                id=user_id,
                 email="admin@example.com",
                 hashed_password=get_password_hash("admin"),
                 full_name="Admin User",

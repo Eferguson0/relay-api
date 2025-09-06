@@ -2,12 +2,13 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.user import User
 
@@ -71,7 +72,10 @@ def create_user(
     db: Session, email: str, password: str, full_name: Optional[str] = None
 ) -> User:
     hashed_password = get_password_hash(password)
-    db_user = User(email=email, hashed_password=hashed_password, full_name=full_name)
+    user_id = generate_rid("user")
+    db_user = User(
+        id=user_id, email=email, hashed_password=hashed_password, full_name=full_name
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

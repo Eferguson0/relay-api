@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -50,5 +50,5 @@ class HeartRateIngestResponse(BaseModel):
     message: str
     records_processed: int
     metrics_processed: List[str]
-    user_email: str
+    user_id: str
     source: str

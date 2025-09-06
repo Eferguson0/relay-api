@@ -14,6 +14,9 @@ A modern backend API built with FastAPI, PostgreSQL, and OpenAI integration.
 - Database migrations with Alembic
 - UV package manager for faster dependency installation
 - Static file serving for frontend
+- **RID-based resource identification** (Resource IDs with format `type..randomstring`)
+- **Comprehensive linting** with ruff, black, and isort
+- **Health tracking APIs** for heart rate, diet, weight, and goals
 
 ## Prerequisites
 
@@ -96,27 +99,46 @@ For the best development experience, configure your IDE to use the virtual envir
 ```
 .
 ├── app/
+│   ├── api/                    # API route handlers
+│   │   ├── auth.py            # Authentication endpoints
+│   │   ├── chat.py            # OpenAI chat endpoints
+│   │   ├── diet.py            # Diet/nutrition tracking
+│   │   ├── goals.py           # User goals management
+│   │   ├── heart_rate.py      # Heart rate data ingestion
+│   │   ├── system.py          # System health endpoints
+│   │   └── weight.py          # Weight tracking
 │   ├── core/
-│   │   └── config.py
+│   │   ├── config.py          # Application configuration
+│   │   └── rid.py             # RID (Resource ID) utilities
 │   ├── db/
-│   │   ├── session.py
-│   │   └── init_db.py
-│   ├── models/
-│   ├── schemas/
-│   │   └── auth.py
-│   ├── services/
-│   │   ├── auth_service.py
-│   │   └── openai_service.py
-│   ├── static/
-│   ├── templates/
-│   └── main.py
-├── alembic/
+│   │   ├── session.py         # Database session management
+│   │   └── init_db.py         # Database initialization
+│   ├── models/                # SQLAlchemy database models
+│   │   ├── diet.py            # Diet/nutrition model
+│   │   ├── goals.py           # Goals models
+│   │   ├── heart_rate.py      # Heart rate model
+│   │   ├── models.py          # Model imports
+│   │   ├── user.py            # User model
+│   │   └── weight.py          # Weight model
+│   ├── schemas/               # Pydantic data schemas
+│   │   ├── diet.py            # Diet schemas
+│   │   ├── goals.py           # Goals schemas
+│   │   ├── heart_rate.py      # Heart rate schemas
+│   │   ├── user.py            # User schemas
+│   │   └── weight.py          # Weight schemas
+│   ├── services/              # Business logic services
+│   │   ├── auth_service.py    # Authentication service
+│   │   └── openai_service.py  # OpenAI integration
+│   └── main.py                # FastAPI application entry point
+├── scripts/                   # Utility scripts
+│   ├── lint.py               # Linting script
+│   └── reset_db.py           # Database reset script
+├── alembic/                   # Database migrations
 │   └── versions/
 ├── .env
 ├── .gitignore
 ├── alembic.ini
 ├── docker-compose.yml
-├── docker-compose.prod.yml
 ├── Dockerfile
 ├── pyproject.toml
 └── README.md
@@ -131,10 +153,28 @@ This project uses UV, a new Python package manager that offers significant perfo
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
-uv pip install --system -r pyproject.toml
+uv sync
 
 # Add a new dependency
-uv pip install package_name
+uv add package_name
+```
+
+### Development Commands
+
+The project includes several convenient `uv` commands for development:
+
+```bash
+# Database management
+uv run reset-db              # Wipe database and create fresh migration
+
+# Code quality
+uv run lint                  # Check code quality (isort, black, ruff)
+uv run lint-fix              # Auto-fix code quality issues
+
+# Database migrations
+uv run alembic revision --autogenerate -m "Description"
+uv run alembic upgrade head
+uv run alembic current
 ```
 
 ### Docker Commands
@@ -220,7 +260,7 @@ ERROR [alembic.util.messaging] Can't locate revision identified by 'abc123def456
 ```
 
 
-**Solution 1: Fresh Database (Deletes All Data)**
+**Fresh Database (Deletes All Data)**
 ```bash
 # Stop and remove everything including volumes
 docker compose down -v
@@ -231,25 +271,6 @@ docker compose up -d postgres
 # Apply migrations
 uv run alembic upgrade head
 ```
-
-**Solution 2: Downgrade to Known Good Revision**
-```bash
-# Downgrade to the last known good revision
-uv run alembic downgrade <known_good_revision_id>
-
-# Then create new migration
-uv run alembic revision --autogenerate -m "new_migration"
-uv run alembic upgrade head
-```
-
-#### Migration Best Practices
-
-1. **Always backup your database** before running migrations in production
-2. **Test migrations** on a copy of your production data first
-3. **Review generated migrations** before applying them
-4. **Use descriptive migration names** that explain what changed
-5. **Never delete migration files** that have been applied to production
-6. **Keep migrations small and focused** on single changes when possible
 
 #### Common Migration Commands
 
@@ -276,6 +297,20 @@ Sometimes during development, you may want to wipe all migrations and start with
 
 **⚠️ WARNING: This will delete all existing data in your database!**
 
+**Easy Method (Recommended):**
+```bash
+# Use the built-in reset command
+uv run reset-db
+```
+
+This command will:
+1. Drop all existing tables
+2. Remove all migration files
+3. Create a fresh initial migration
+4. Apply the migration
+5. Create initial admin and test users
+
+**Manual Method:**
 ```bash
 # 1. Remove all existing migration files
 rm -f alembic/versions/*.py
@@ -292,7 +327,7 @@ with engine.connect() as conn:
     print('Alembic version table dropped successfully')
 "
 
-# 3. Drop all existing tables (optional - only if you want to start completely fresh)
+# 3. Drop all existing tables
 uv run python -c "
 from app.db.session import engine
 from sqlalchemy import text
@@ -300,13 +335,18 @@ from sqlalchemy import text
 # Drop all existing tables
 with engine.connect() as conn:
     conn.execute(text('DROP TABLE IF EXISTS hourly_heart_rate CASCADE'))
+    conn.execute(text('DROP TABLE IF EXISTS diet CASCADE'))
+    conn.execute(text('DROP TABLE IF EXISTS weight CASCADE'))
+    conn.execute(text('DROP TABLE IF EXISTS goal_weight CASCADE'))
+    conn.execute(text('DROP TABLE IF EXISTS goal_daily_diet CASCADE'))
+    conn.execute(text('DROP TABLE IF EXISTS goal_message CASCADE'))
     conn.execute(text('DROP TABLE IF EXISTS users CASCADE'))
     conn.commit()
     print('All existing tables dropped successfully')
 "
 
 # 4. Create a new initial migration with current model structure
-uv run alembic revision --autogenerate -m "Initial migration with email as primary key and composite heart rate key"
+uv run alembic revision --autogenerate -m "Initial migration with RID-based IDs"
 
 # 5. Apply the new initial migration
 uv run alembic upgrade head
@@ -355,6 +395,32 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Resource Identification (RID) System
+
+The API uses RIDs (Resource IDs) for all resource identification instead of auto-incrementing integers. This provides better scalability and security.
+
+### RID Format
+- **Format**: `<type>..<random-string>`
+- **Examples**: 
+  - User: `user..test123456`
+  - Diet: `diet..m8ssli7xr41u`
+  - Weight: `weight..kw3cgkg7f08g`
+
+### Benefits
+- **No sequential IDs** - Prevents enumeration attacks
+- **Type identification** - Easy to identify resource type from ID
+- **Distributed-friendly** - No coordination needed for ID generation
+- **URL-safe** - Can be used directly in URLs and APIs
+
+### RID Generation
+RIDs are automatically generated using the `generate_rid()` function:
+```python
+from app.core.rid import generate_rid
+
+user_id = generate_rid("user")      # user..abc123def456
+diet_id = generate_rid("diet")      # diet..xyz789ghi012
+```
+
 ## Authentication
 
 The API uses JWT (JSON Web Tokens) for authentication with bearer tokens that expire after 1 day.
@@ -395,16 +461,34 @@ curl -X GET "http://localhost:8000/api/auth/me" \
 ### Protected Endpoints
 
 The following endpoints require authentication (Bearer token in Authorization header):
+
+**Authentication:**
 - `GET /api/auth/me` - Get user profile
 - `POST /api/auth/refresh` - Refresh token
+
+**Heart Rate:**
 - `POST /api/ingest-heart-rate` - Ingest heart rate data
 - `GET /api/heart-rate` - Get heart rate data
+
+**Diet & Nutrition:**
 - `POST /api/ingest-diet` - Ingest diet/macro data
-- `GET /api/diet` - Get diet records
+- `GET /api/diet` - Get all diet records
 - `POST /api/diet/record` - Add single diet record
 - `DELETE /api/diet/record/{id}` - Delete diet record
 - `GET /api/diet/daily/{date}` - Get all records for a specific day
 - `GET /api/diet/aggregate` - Get aggregated records by day
+
+**Weight Tracking:**
+- `POST /api/weight` - Add weight measurement
+- `GET /api/weight` - Get all weight records
+- `PUT /api/weight/{id}` - Update weight record
+- `DELETE /api/weight/{id}` - Delete weight record
+
+**Goals:**
+- `POST /api/goals/weight` - Create weight goal
+- `GET /api/goals/weight` - Get weight goal
+- `PUT /api/goals/weight` - Update weight goal
+- `DELETE /api/goals/weight` - Delete weight goal
 
 ### Token Details
 
@@ -496,8 +580,8 @@ curl -X POST "http://localhost:8000/api/ingest-diet" \
 ### Diet Data Structure
 
 Each diet record contains:
-- **id**: Unique random string identifier (12 characters, auto-generated)
-- **user_email**: User identifier (automatically set)
+- **id**: RID identifier (format: `diet..<random-string>`)
+- **user_id**: User RID identifier (format: `user..<random-string>`)
 - **datetime**: When the meal was consumed (ISO format)
 - **protein**: Protein in grams
 - **carbs**: Carbohydrates in grams
@@ -513,6 +597,111 @@ Each diet record contains:
 - ✅ **Date range filtering** - Query records within date ranges
 - ✅ **User isolation** - Users can only access their own data
 - ✅ **Flexible meal tracking** - Support for any meal names and notes
+
+## Weight Tracking API
+
+The API provides endpoints for tracking weight measurements and body composition.
+
+### Weight Endpoints
+
+#### Add Weight Measurement
+```bash
+curl -X POST "http://localhost:8000/api/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "weight": 70.5,
+    "body_fat_percentage": 15.2,
+    "muscle_mass_percentage": 45.8,
+    "notes": "Morning weight measurement"
+  }'
+```
+
+#### Get All Weight Records
+```bash
+curl -X GET "http://localhost:8000/api/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Update Weight Record
+```bash
+curl -X PUT "http://localhost:8000/api/weight/weight..abc123def456" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "weight": 70.0,
+    "notes": "Updated measurement"
+  }'
+```
+
+#### Delete Weight Record
+```bash
+curl -X DELETE "http://localhost:8000/api/weight/weight..abc123def456" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Weight Data Structure
+
+Each weight record contains:
+- **id**: RID identifier (format: `weight..<random-string>`)
+- **user_id**: User RID identifier (format: `user..<random-string>`)
+- **weight**: Weight measurement in kg or lbs
+- **body_fat_percentage**: Body fat percentage (0-100)
+- **muscle_mass_percentage**: Muscle mass percentage (0-100)
+- **notes**: Additional notes about the measurement
+- **created_at**: Timestamp when record was created
+- **updated_at**: Timestamp when record was last updated
+
+## Goals API
+
+The API provides endpoints for managing user goals (weight, diet, and motivational messages).
+
+### Goals Endpoints
+
+#### Create Weight Goal
+```bash
+curl -X POST "http://localhost:8000/api/goals/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "weight": 65.0,
+    "body_fat_percentage": 12.0,
+    "muscle_mass_percentage": 48.0
+  }'
+```
+
+#### Get Weight Goal
+```bash
+curl -X GET "http://localhost:8000/api/goals/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Update Weight Goal
+```bash
+curl -X PUT "http://localhost:8000/api/goals/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "weight": 63.0,
+    "body_fat_percentage": 10.0
+  }'
+```
+
+#### Delete Weight Goal
+```bash
+curl -X DELETE "http://localhost:8000/api/goals/weight" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Goals Data Structure
+
+**Weight Goals:**
+- **user_id**: User RID identifier (format: `user..<random-string>`) - Primary key
+- **weight**: Target weight in kg or lbs
+- **body_fat_percentage**: Target body fat percentage
+- **muscle_mass_percentage**: Target muscle mass percentage
+- **created_at**: Timestamp when goal was created
+- **updated_at**: Timestamp when goal was last updated
 
 ## Frontend Integration
 

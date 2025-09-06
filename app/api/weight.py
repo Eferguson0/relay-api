@@ -1,20 +1,20 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.weight import Weight
 from app.models.user import User
+from app.models.weight import Weight
 from app.schemas.weight import (
     WeightCreate,
-    WeightUpdate,
-    WeightResponse,
     WeightCreateResponse,
-    WeightUpdateResponse,
     WeightDeleteResponse,
     WeightExportResponse,
+    WeightResponse,
+    WeightUpdate,
+    WeightUpdateResponse,
 )
 from app.services.auth_service import get_current_active_user
 
@@ -33,7 +33,8 @@ async def create_weight_record(
     try:
         # Create new weight record
         new_weight = Weight(
-            user_email=current_user.email,
+            id=generate_rid("weight"),
+            user_id=current_user.id,
             weight=weight_data.weight,
             body_fat_percentage=weight_data.body_fat_percentage,
             muscle_mass_percentage=weight_data.muscle_mass_percentage,
@@ -43,7 +44,7 @@ async def create_weight_record(
         db.commit()
         db.refresh(new_weight)
 
-        logger.info(f"Created weight record for {current_user.email}")
+        logger.info(f"Created weight record for {current_user.id}")
         return WeightCreateResponse(
             message="Weight record created successfully", weight=new_weight
         )
@@ -67,14 +68,14 @@ async def get_weight_records(
     try:
         weights = (
             db.query(Weight)
-            .filter(Weight.user_email == current_user.email)
+            .filter(Weight.user_id == current_user.id)
             .order_by(Weight.created_at.desc())
             .all()
         )
 
-        logger.info(f"Retrieved {len(weights)} weight records for {current_user.email}")
+        logger.info(f"Retrieved {len(weights)} weight records for {current_user.id}")
         return WeightExportResponse(
-            records=weights, total_count=len(weights), user_email=current_user.email
+            records=weights, total_count=len(weights), user_id=current_user.id
         )
 
     except HTTPException:
@@ -89,7 +90,7 @@ async def get_weight_records(
 
 @router.get("/weight/{weight_id}", response_model=WeightResponse)
 async def get_weight_record(
-    weight_id: int,
+    weight_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
@@ -97,7 +98,7 @@ async def get_weight_record(
     try:
         weight = (
             db.query(Weight)
-            .filter(Weight.id == weight_id, Weight.user_email == current_user.email)
+            .filter(Weight.id == weight_id, Weight.user_id == current_user.id)
             .first()
         )
 
@@ -107,7 +108,7 @@ async def get_weight_record(
                 detail="Weight record not found",
             )
 
-        logger.info(f"Retrieved weight record {weight_id} for {current_user.email}")
+        logger.info(f"Retrieved weight record {weight_id} for {current_user.id}")
         return weight
 
     except HTTPException:
@@ -122,7 +123,7 @@ async def get_weight_record(
 
 @router.put("/weight/{weight_id}", response_model=WeightUpdateResponse)
 async def update_weight_record(
-    weight_id: int,
+    weight_id: str,
     weight_data: WeightUpdate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
@@ -132,7 +133,7 @@ async def update_weight_record(
         # Find existing weight record
         weight = (
             db.query(Weight)
-            .filter(Weight.id == weight_id, Weight.user_email == current_user.email)
+            .filter(Weight.id == weight_id, Weight.user_id == current_user.id)
             .first()
         )
 
@@ -155,7 +156,7 @@ async def update_weight_record(
         db.commit()
         db.refresh(weight)
 
-        logger.info(f"Updated weight record {weight_id} for {current_user.email}")
+        logger.info(f"Updated weight record {weight_id} for {current_user.id}")
         return WeightUpdateResponse(
             message="Weight record updated successfully", weight=weight
         )
@@ -172,7 +173,7 @@ async def update_weight_record(
 
 @router.delete("/weight/{weight_id}", response_model=WeightDeleteResponse)
 async def delete_weight_record(
-    weight_id: int,
+    weight_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
@@ -181,7 +182,7 @@ async def delete_weight_record(
         # Find and delete the weight record
         weight = (
             db.query(Weight)
-            .filter(Weight.id == weight_id, Weight.user_email == current_user.email)
+            .filter(Weight.id == weight_id, Weight.user_id == current_user.id)
             .first()
         )
 
@@ -194,7 +195,7 @@ async def delete_weight_record(
         db.delete(weight)
         db.commit()
 
-        logger.info(f"Deleted weight record {weight_id} for {current_user.email}")
+        logger.info(f"Deleted weight record {weight_id} for {current_user.id}")
         return WeightDeleteResponse(
             message="Weight record deleted successfully", deleted_count=1
         )

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.sql import func
 
 from app.db.session import Base
@@ -7,7 +7,8 @@ from app.db.session import Base
 class User(Base):
     __tablename__ = "users"
 
-    email = Column(String, primary_key=True, nullable=False)
+    id = Column(String, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String)
     is_active = Column(Boolean, default=True)

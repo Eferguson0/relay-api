@@ -1,11 +1,4 @@
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import Column, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,7 +9,7 @@ class Diet(Base):
     __tablename__ = "diet"
 
     id = Column(String, primary_key=True, index=True)
-    user_email = Column(String, ForeignKey("users.email"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
     datetime = Column(DateTime(timezone=True), nullable=False)
     protein = Column(Numeric, nullable=True)  # grams
     carbs = Column(Numeric, nullable=True)  # grams

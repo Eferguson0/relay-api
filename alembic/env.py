@@ -9,10 +9,24 @@ from app.core.config import settings
 from app.db.session import Base
 
 # Import models to ensure they are registered with Base.metadata
+from app.models.diet import Diet
+from app.models.goals import GoalDailyDiet, GoalMessage, GoalWeight
 from app.models.heart_rate import HourlyHeartRate
 from app.models.user import User
+from app.models.weight import Weight
+from app.models.workout import ActiveCalories, HourlySteps
 
-_ = [User, HourlyHeartRate]
+_ = [
+    User,
+    HourlyHeartRate,
+    Diet,
+    Weight,
+    GoalWeight,
+    GoalDailyDiet,
+    GoalMessage,
+    ActiveCalories,
+    HourlySteps,
+]
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

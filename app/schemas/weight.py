@@ -33,11 +33,12 @@ class WeightUpdate(BaseModel):
 
 # Weight record response schema
 class WeightResponse(BaseModel):
-    id: int
-    user_email: str
+    id: str
+    user_id: str
     weight: float
     body_fat_percentage: Optional[float]
     muscle_mass_percentage: Optional[float]
+    notes: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
 
@@ -67,4 +68,4 @@ class WeightDeleteResponse(BaseModel):
 class WeightExportResponse(BaseModel):
     records: list[WeightResponse]
     total_count: int
-    user_email: str
+    user_id: str
