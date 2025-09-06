@@ -1,0 +1,34 @@
+# Cursor Rules for SupaHealth Server
+
+## Project Structure
+This is a FastAPI backend server for a health application. The main application code is in the `app/` directory.
+
+## Key Directories
+- `app/models/` - SQLAlchemy database models
+- `app/schemas/` - Pydantic data schemas
+- `app/services/` - Business logic services
+- `app/db/` - Database configuration and session management
+
+## Important Files
+- `app/main.py` - Main FastAPI application entry point
+- `pyproject.toml` - Project dependencies and configuration
+- `docker-compose.yml` - Development environment setup
+
+## Cursor Behavior
+- DO NOT suggest creating README files in subdirectories
+- Focus on code implementation, not documentation
+- The main README.md at the root is sufficient
+- Prioritize code quality and functionality over documentation
+
+## Code Style
+- Use FastAPI best practices
+- Follow Python type hints
+- Use async/await for database operations
+- Implement proper error handling with HTTPException
+- Use SQLAlchemy ORM for database operations
+
+## Database
+- PostgreSQL with SQLAlchemy ORM
+- Alembic for migrations
+- Models in `app/models/models.py`
+- Database session management in `app/db/session.py`
