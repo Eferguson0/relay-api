@@ -25,7 +25,7 @@ class HourlyHeartRate(Base):
     min_hr = Column(Integer)
     avg_hr = Column(Numeric)
     max_hr = Column(Integer)
-    source = Column(Text)
+    source = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

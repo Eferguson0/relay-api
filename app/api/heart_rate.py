@@ -8,25 +8,23 @@ from app.db.session import get_db
 from app.models.heart_rate import HourlyHeartRate
 from app.models.user import User
 from app.schemas.heart_rate import HeartRateIngestRequest, HeartRateIngestResponse
+from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["ingest"])
+router = APIRouter(prefix="/api", tags=["heart-rate"])
 
 
 @router.post("/ingest-heart-rate", response_model=HeartRateIngestResponse)
 async def ingest_heart_rate_data(
-    request: HeartRateIngestRequest, db: Session = Depends(get_db)
+    request: HeartRateIngestRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Ingest heart rate data from request body and store in hourly_heart_rate table"""
     try:
-        # Get the first user (assuming we have at least one user)
-        user = db.query(User).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No users found in database. Please create a user first.",
-            )
+        # Use the authenticated user
+        user = current_user
 
         # Process the heart rate data from request body
         inserted_records = 0
@@ -64,6 +62,11 @@ async def ingest_heart_rate_data(
                     logger.warning(f"Invalid date format: {date_str}, error: {e}")
                     continue
 
+                # Validate required fields
+                if not source:
+                    logger.warning(f"Missing source for data point: {data_point}")
+                    continue
+
                 # Validate heart rate values
                 if min_hr is not None and (min_hr < 0 or min_hr > 300):
                     logger.warning(f"Invalid min_hr value: {min_hr}")
@@ -77,12 +80,13 @@ async def ingest_heart_rate_data(
                     logger.warning(f"Invalid max_hr value: {max_hr}")
                     max_hr = None
 
-                # Check if record already exists for this datetime and user
+                # Check if record already exists for this datetime, user, and source
                 existing_record = (
                     db.query(HourlyHeartRate)
                     .filter(
                         HourlyHeartRate.user_email == user.email,
                         HourlyHeartRate.date == activity_datetime,
+                        HourlyHeartRate.source == source,
                     )
                     .first()
                 )
@@ -98,7 +102,6 @@ async def ingest_heart_rate_data(
                     existing_record.max_hr = (
                         max_hr if max_hr is not None else existing_record.max_hr
                     )
-                    existing_record.source = source or existing_record.source
                     existing_record.updated_at = datetime.now()
                     logger.info(
                         f"Updated existing heart rate record for {activity_datetime}"

@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import HTTPException, status
-from jose import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.db.session import get_db
 from app.models.user import User
 
 # Security configuration
@@ -74,3 +76,48 @@ def create_user(
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+def verify_token(token: str) -> Optional[str]:
+    """Verify JWT token and return the email if valid"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        return email
+    except JWTError:
+        return None
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+    db: Session = Depends(get_db),
+) -> User:
+    """Get current authenticated user from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        token = credentials.credentials
+        email = verify_token(token)
+        if email is None:
+            raise credentials_exception
+    except Exception:
+        raise credentials_exception
+
+    user = get_user_by_email(db, email=email)
+    if user is None:
+        raise credentials_exception
+
+    return user
+
+
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """Get current active user"""
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user

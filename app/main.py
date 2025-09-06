@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 
-from app.api import auth, chat, export, ingest, system
+from app.api import auth, chat, diet, export, goals, heart_rate, system, weight
 from app.db.init_db import create_first_superuser, init_db
 from app.db.session import SessionLocal
 
@@ -20,8 +20,11 @@ app = FastAPI(
 # Include API routers
 app.include_router(system.router)
 app.include_router(auth.router)
-app.include_router(ingest.router)
+app.include_router(heart_rate.router)
 app.include_router(export.router)
+app.include_router(diet.router)
+app.include_router(goals.router)
+app.include_router(weight.router)
 app.include_router(chat.router)
 
 

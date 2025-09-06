@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.heart_rate import HourlyHeartRate
+from app.models.user import User
+from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +21,14 @@ async def get_heart_rate_data(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get hourly heart rate records with optional filtering"""
     try:
-        query = db.query(HourlyHeartRate)
-
-        # Filter by user_email if provided
-        if user_email:
-            query = query.filter(HourlyHeartRate.user_email == user_email)
+        # Only show data for the authenticated user (security)
+        query = db.query(HourlyHeartRate).filter(
+            HourlyHeartRate.user_email == current_user.email
+        )
 
         # Filter by date range if provided
         if start_date:

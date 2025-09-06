@@ -1,15 +1,22 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # Heart Rate Ingest Request Schemas
 class MetricDataPoint(BaseModel):
-    Max: Optional[float] = Field(None, ge=0, le=300)
+    Max: Optional[int] = Field(None, ge=0, le=300)
     date: str
     Min: Optional[int] = Field(None, ge=0, le=300)
     Avg: Optional[float] = Field(None, ge=0, le=300)
     source: str
+
+    @field_validator("Min", "Max", mode="before")
+    @classmethod
+    def round_down_float(cls, v):
+        if v is not None and isinstance(v, (int, float)):
+            return int(v)
+        return v
 
 
 class Metric(BaseModel):

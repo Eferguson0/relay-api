@@ -6,12 +6,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserResponse
 from app.services.auth_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
     create_user,
+    get_current_active_user,
     get_user_by_email,
 )
 
@@ -70,3 +72,24 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating user",
         )
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_profile(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get current user profile"""
+    logger.info(f"User profile requested for: {current_user.email}")
+    return current_user
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(current_user: User = Depends(get_current_active_user)):
+    """Refresh access token for current user"""
+    logger.info(f"Token refresh requested for user: {current_user.email}")
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email}, expires_delta=access_token_expires
+    )
+    logger.info(f"Token refreshed successfully for user: {current_user.email}")
+    return {"access_token": access_token, "token_type": "bearer"}
