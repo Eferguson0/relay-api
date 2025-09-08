@@ -417,8 +417,8 @@ RIDs are automatically generated using the `generate_rid()` function:
 ```python
 from app.core.rid import generate_rid
 
-user_id = generate_rid("user")      # user..abc123def456
-diet_id = generate_rid("diet")      # diet..xyz789ghi012
+user_id = generate_rid("auth", "user")      # auth..user.abc123def456
+diet_id = generate_rid("nutrition", "macros")  # nutrition..macros.xyz789ghi012
 ```
 
 ## Authentication

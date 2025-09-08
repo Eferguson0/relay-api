@@ -1,0 +1,89 @@
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+# Body Composition Schemas
+class BodyCompositionCreate(BaseModel):
+    measurement_date: datetime = Field(..., description="Date and time of measurement")
+    weight: Optional[float] = Field(None, ge=0, description="Weight in kg or lbs")
+    body_fat_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Body fat percentage"
+    )
+    muscle_mass_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Muscle mass percentage"
+    )
+    bone_density: Optional[float] = Field(None, ge=0, description="Bone density")
+    water_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Water percentage"
+    )
+    visceral_fat: Optional[float] = Field(None, ge=0, description="Visceral fat level")
+    bmr: Optional[float] = Field(None, ge=0, description="Basal Metabolic Rate")
+    measurement_method: Optional[str] = Field(
+        None, description="Measurement method (e.g., DEXA, BIA, Scale)"
+    )
+    notes: Optional[str] = Field(None, description="Additional notes")
+
+
+class BodyCompositionUpdate(BaseModel):
+    measurement_date: Optional[datetime] = Field(
+        None, description="Date and time of measurement"
+    )
+    weight: Optional[float] = Field(None, ge=0, description="Weight in kg or lbs")
+    body_fat_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Body fat percentage"
+    )
+    muscle_mass_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Muscle mass percentage"
+    )
+    bone_density: Optional[float] = Field(None, ge=0, description="Bone density")
+    water_percentage: Optional[float] = Field(
+        None, ge=0, le=100, description="Water percentage"
+    )
+    visceral_fat: Optional[float] = Field(None, ge=0, description="Visceral fat level")
+    bmr: Optional[float] = Field(None, ge=0, description="Basal Metabolic Rate")
+    measurement_method: Optional[str] = Field(None, description="Measurement method")
+    notes: Optional[str] = Field(None, description="Additional notes")
+
+
+class BodyCompositionResponse(BaseModel):
+    id: str
+    user_id: str
+    measurement_date: datetime
+    weight: Optional[float]
+    body_fat_percentage: Optional[float]
+    muscle_mass_percentage: Optional[float]
+    bone_density: Optional[float]
+    water_percentage: Optional[float]
+    visceral_fat: Optional[float]
+    bmr: Optional[float]
+    measurement_method: Optional[str]
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# Response schemas
+class BodyCompositionCreateResponse(BaseModel):
+    message: str
+    composition: BodyCompositionResponse
+
+
+class BodyCompositionUpdateResponse(BaseModel):
+    message: str
+    composition: BodyCompositionResponse
+
+
+class BodyCompositionDeleteResponse(BaseModel):
+    message: str
+    deleted_count: int
+
+
+class BodyCompositionExportResponse(BaseModel):
+    records: list[BodyCompositionResponse]
+    total_count: int
+    user_id: str

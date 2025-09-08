@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
 from app.db.session import Base, engine
-from app.models.user import User
+from app.models.auth.user import AuthUser
 from app.services.auth_service import get_password_hash
 
 logging.basicConfig(level=logging.INFO)
@@ -30,11 +30,11 @@ def create_first_superuser(db: Session) -> None:
     """
     try:
         # Check if any user exists
-        user = db.query(User).first()
+        user = db.query(AuthUser).first()
         if not user:
             # Create superuser with RID
-            user_id = generate_rid("user")
-            superuser = User(
+            user_id = generate_rid("auth", "user")
+            superuser = AuthUser(
                 id=user_id,
                 email="admin@example.com",
                 hashed_password=get_password_hash("admin"),

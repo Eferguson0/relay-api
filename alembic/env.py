@@ -7,25 +7,38 @@ from alembic import context
 # Import settings after environment variables are loaded
 from app.core.config import settings
 from app.db.session import Base
+from app.models.auth.user import AuthUser
 
 # Import models to ensure they are registered with Base.metadata
-from app.models.diet import Diet
-from app.models.goals import GoalDailyDiet, GoalMessage, GoalWeight
-from app.models.heart_rate import HourlyHeartRate
-from app.models.user import User
-from app.models.weight import Weight
-from app.models.workout import ActiveCalories, HourlySteps
+from app.models.enums import DataSource
+from app.models.goal.general import GoalGeneral
+from app.models.goal.macros import GoalMacros
+from app.models.goal.weight import GoalWeight
+from app.models.metric.activity.miles import ActivityMiles
+from app.models.metric.activity.steps import ActivitySteps
+from app.models.metric.activity.workouts import ActivityWorkouts
+from app.models.metric.body.composition import BodyComposition
+from app.models.metric.body.heartrate import BodyHeartRate
+from app.models.metric.calories.active import CaloriesActive
+from app.models.metric.calories.baseline import CaloriesBaseline
+from app.models.metric.sleep.daily import SleepDaily
+from app.models.nutrition.macros import NutritionMacros
 
 _ = [
-    User,
-    HourlyHeartRate,
-    Diet,
-    Weight,
+    AuthUser,
+    DataSource,
+    GoalGeneral,
+    GoalMacros,
     GoalWeight,
-    GoalDailyDiet,
-    GoalMessage,
-    ActiveCalories,
-    HourlySteps,
+    BodyComposition,
+    BodyHeartRate,
+    ActivitySteps,
+    ActivityMiles,
+    ActivityWorkouts,
+    CaloriesBaseline,
+    CaloriesActive,
+    SleepDaily,
+    NutritionMacros,
 ]
 
 # this is the Alembic Config object, which provides

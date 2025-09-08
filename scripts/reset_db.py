@@ -39,20 +39,39 @@ def wipe_database():
     print("🗑️  Wiping database...")
     try:
         with engine.connect() as conn:
-            # Drop all tables
-            tables_to_drop = [
-                "hourly_heart_rate",
-                "diet",
-                "weight",
-                "goal_weight",
-                "goal_daily_diet",
-                "goal_message",
-                "users",
-                "alembic_version",
-            ]
+            # Get all table names dynamically
+            result = conn.execute(
+                text(
+                    """
+                SELECT tablename 
+                FROM pg_tables 
+                WHERE schemaname = 'public'
+            """
+                )
+            )
+            tables = [row[0] for row in result.fetchall()]
 
-            for table in tables_to_drop:
+            # Drop all tables
+            for table in tables:
                 conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
+
+            # Get all enum types dynamically
+            result = conn.execute(
+                text(
+                    """
+                SELECT typname 
+                FROM pg_type 
+                WHERE typtype = 'e' AND typnamespace = (
+                    SELECT oid FROM pg_namespace WHERE nspname = 'public'
+                )
+            """
+                )
+            )
+            enum_types = [row[0] for row in result.fetchall()]
+
+            # Drop all enum types
+            for enum_type in enum_types:
+                conn.execute(text(f"DROP TYPE IF EXISTS {enum_type} CASCADE"))
 
             conn.commit()
             print("✅ Database wiped successfully")
@@ -96,15 +115,16 @@ def create_initial_users():
     """Create initial admin and test users."""
     print("👤 Creating initial users...")
     try:
+        from app.core.rid import generate_rid
         from app.db.session import SessionLocal
-        from app.models.user import User
+        from app.models.auth.user import AuthUser
         from app.services.auth_service import get_password_hash
 
         db = SessionLocal()
         try:
             # Create admin user
-            admin_user = User(
-                id="user..admin123456",
+            admin_user = AuthUser(
+                id=generate_rid("auth", "user"),
                 email="admin@example.com",
                 hashed_password=get_password_hash("admin"),
                 full_name="Admin User",
@@ -114,8 +134,8 @@ def create_initial_users():
             db.add(admin_user)
 
             # Create test user
-            test_user = User(
-                id="user..test123456",
+            test_user = AuthUser(
+                id=generate_rid("auth", "user"),
                 email="test@gmail.com",
                 hashed_password=get_password_hash("test123"),
                 full_name="Test User",
@@ -128,7 +148,7 @@ def create_initial_users():
             print("✅ Initial users created successfully")
 
             # Show created users
-            users = db.query(User).all()
+            users = db.query(AuthUser).all()
             print(f"📊 Created {len(users)} users:")
             for user in users:
                 print(f"   - ID: {user.id}, Email: {user.email}")
