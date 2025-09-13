@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Optional
 
@@ -112,3 +114,18 @@ class DailyAggregationResponse(BaseModel):
 class NutritionMacrosDeleteResponse(BaseModel):
     message: str
     deleted_count: int
+
+
+# Bulk Operations Schemas
+class NutritionMacrosBulkCreate(BaseModel):
+    records: List[NutritionMacrosRecordCreate] = Field(
+        ..., description="List of nutrition macro records to create/update"
+    )
+
+
+class NutritionMacrosBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[NutritionMacrosRecordResponse]

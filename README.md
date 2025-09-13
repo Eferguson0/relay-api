@@ -100,13 +100,31 @@ For the best development experience, configure your IDE to use the virtual envir
 .
 ├── app/
 │   ├── api/                    # API route handlers
-│   │   ├── auth.py            # Authentication endpoints
-│   │   ├── chat.py            # OpenAI chat endpoints
-│   │   ├── diet.py            # Diet/nutrition tracking
-│   │   ├── goals.py           # User goals management
-│   │   ├── heart_rate.py      # Heart rate data ingestion
-│   │   ├── system.py          # System health endpoints
-│   │   └── weight.py          # Weight tracking
+│   │   └── v1/                # API version 1
+│   │       ├── auth/          # Authentication endpoints
+│   │       │   ├── login.py   # Login endpoints
+│   │       │   └── user.py    # User management
+│   │       ├── chat/          # OpenAI chat endpoints
+│   │       ├── goal/          # User goals management
+│   │       │   ├── general.py # General goals
+│   │       │   ├── macros.py  # Macro goals
+│   │       │   └── weight.py  # Weight goals
+│   │       ├── metric/        # Health metrics
+│   │       │   ├── activity/  # Activity metrics
+│   │       │   │   ├── miles.py    # Miles tracking
+│   │       │   │   ├── steps.py    # Steps tracking
+│   │       │   │   └── workouts.py # Workout tracking
+│   │       │   ├── body/      # Body composition
+│   │       │   │   ├── composition.py # Body composition
+│   │       │   │   └── heartrate.py   # Heart rate tracking
+│   │       │   ├── calories/  # Calorie tracking
+│   │       │   │   ├── active.py     # Active calories
+│   │       │   │   └── baseline.py   # Baseline calories
+│   │       │   └── sleep/     # Sleep tracking
+│   │       │       └── daily.py     # Daily sleep data
+│   │       ├── nutrition/     # Nutrition tracking
+│   │       │   └── macros.py  # Macro nutrition
+│   │       └── system/        # System health endpoints
 │   ├── core/
 │   │   ├── config.py          # Application configuration
 │   │   └── rid.py             # RID (Resource ID) utilities
@@ -114,18 +132,44 @@ For the best development experience, configure your IDE to use the virtual envir
 │   │   ├── session.py         # Database session management
 │   │   └── init_db.py         # Database initialization
 │   ├── models/                # SQLAlchemy database models
-│   │   ├── diet.py            # Diet/nutrition model
-│   │   ├── goals.py           # Goals models
-│   │   ├── heart_rate.py      # Heart rate model
-│   │   ├── models.py          # Model imports
-│   │   ├── user.py            # User model
-│   │   └── weight.py          # Weight model
+│   │   ├── auth/              # Authentication models
+│   │   │   └── user.py        # AuthUser model
+│   │   ├── goal/              # Goal models
+│   │   │   ├── general.py     # General goals
+│   │   │   ├── macros.py      # Macro goals
+│   │   │   └── weight.py      # Weight goals
+│   │   ├── metric/            # Health metric models
+│   │   │   ├── activity/      # Activity models
+│   │   │   │   ├── miles.py       # ActivityMiles
+│   │   │   │   ├── steps.py       # ActivitySteps
+│   │   │   │   └── workouts.py    # ActivityWorkouts
+│   │   │   ├── body/          # Body composition models
+│   │   │   │   ├── composition.py # BodyComposition
+│   │   │   │   └── heartrate.py   # BodyHeartRate
+│   │   │   ├── calories/      # Calorie models
+│   │   │   │   ├── active.py      # CaloriesActive
+│   │   │   │   └── baseline.py    # CaloriesBaseline
+│   │   │   └── sleep/         # Sleep models
+│   │   │       └── daily.py       # SleepDaily
+│   │   ├── nutrition/         # Nutrition models
+│   │   │   └── macros.py      # NutritionMacros
+│   │   ├── enums.py           # Data source enums
+│   │   └── __init__.py        # Model imports
 │   ├── schemas/               # Pydantic data schemas
-│   │   ├── diet.py            # Diet schemas
-│   │   ├── goals.py           # Goals schemas
-│   │   ├── heart_rate.py      # Heart rate schemas
-│   │   ├── user.py            # User schemas
-│   │   └── weight.py          # Weight schemas
+│   │   ├── auth/              # Authentication schemas
+│   │   │   └── user.py        # User schemas
+│   │   ├── goal/              # Goal schemas
+│   │   │   ├── general.py     # General goal schemas
+│   │   │   ├── macros.py      # Macro goal schemas
+│   │   │   └── weight.py      # Weight goal schemas
+│   │   ├── metric/            # Health metric schemas
+│   │   │   ├── activity/      # Activity schemas
+│   │   │   ├── body/          # Body composition schemas
+│   │   │   ├── calories/      # Calorie schemas
+│   │   │   └── sleep/         # Sleep schemas
+│   │   ├── nutrition/         # Nutrition schemas
+│   │   │   └── macros.py      # Macro nutrition schemas
+│   │   └── __init__.py        # Schema imports
 │   ├── services/              # Business logic services
 │   │   ├── auth_service.py    # Authentication service
 │   │   └── openai_service.py  # OpenAI integration
@@ -417,8 +461,10 @@ RIDs are automatically generated using the `generate_rid()` function:
 ```python
 from app.core.rid import generate_rid
 
-user_id = generate_rid("auth", "user")      # auth..user.abc123def456
-diet_id = generate_rid("nutrition", "macros")  # nutrition..macros.xyz789ghi012
+user_id = generate_rid("auth", "user")           # auth..user.abc123def456
+nutrition_id = generate_rid("nutrition", "macros")  # nutrition..macros.xyz789ghi012
+activity_id = generate_rid("metric", "activity")    # metric..activity.def456ghi789
+goal_id = generate_rid("goal", "weight")            # goal..weight.jkl012mno345
 ```
 
 ## Authentication
@@ -427,16 +473,16 @@ The API uses JWT (JSON Web Tokens) for authentication with bearer tokens that ex
 
 ### Authentication Endpoints
 
-- `POST /api/auth/signup` - Create a new user account
-- `POST /api/auth/signin` - Sign in and get access token
-- `GET /api/auth/me` - Get current user profile (requires authentication)
-- `POST /api/auth/refresh` - Refresh access token (requires authentication)
+- `POST /api/v1/auth/signup` - Create a new user account
+- `POST /api/v1/auth/signin` - Sign in and get access token
+- `GET /api/v1/auth/me` - Get current user profile (requires authentication)
+- `POST /api/v1/auth/refresh` - Refresh access token (requires authentication)
 
 ### Using Authentication
 
 1. **Sign up** a new user:
 ```bash
-curl -X POST "http://localhost:8000/api/auth/signup" \
+curl -X POST "http://localhost:8000/api/v1/auth/signup" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -447,14 +493,14 @@ curl -X POST "http://localhost:8000/api/auth/signup" \
 
 2. **Sign in** to get an access token:
 ```bash
-curl -X POST "http://localhost:8000/api/auth/signin" \
+curl -X POST "http://localhost:8000/api/v1/auth/signin" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=user@example.com&password=your_password"
 ```
 
 3. **Use the token** for protected endpoints:
 ```bash
-curl -X GET "http://localhost:8000/api/auth/me" \
+curl -X GET "http://localhost:8000/api/v1/auth/me" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -463,49 +509,63 @@ curl -X GET "http://localhost:8000/api/auth/me" \
 The following endpoints require authentication (Bearer token in Authorization header):
 
 **Authentication:**
-- `GET /api/auth/me` - Get user profile
-- `POST /api/auth/refresh` - Refresh token
+- `GET /api/v1/auth/me` - Get user profile
+- `POST /api/v1/auth/refresh` - Refresh token
 
-**Heart Rate:**
-- `POST /api/ingest-heart-rate` - Ingest heart rate data
-- `GET /api/heart-rate` - Get heart rate data
+**Activity Metrics:**
+- `GET /api/v1/metric/activity/steps` - Get steps data
+- `POST /api/v1/metric/activity/steps` - Ingest steps data
+- `GET /api/v1/metric/activity/miles` - Get miles data
+- `POST /api/v1/metric/activity/miles` - Ingest miles data
+- `GET /api/v1/metric/activity/workouts` - Get workout data
+- `POST /api/v1/metric/activity/workouts` - Ingest workout data
 
-**Diet & Nutrition:**
-- `POST /api/ingest-diet` - Ingest diet/macro data
-- `GET /api/diet` - Get all diet records
-- `POST /api/diet/record` - Add single diet record
-- `DELETE /api/diet/record/{id}` - Delete diet record
-- `GET /api/diet/daily/{date}` - Get all records for a specific day
-- `GET /api/diet/aggregate` - Get aggregated records by day
+**Body Metrics:**
+- `GET /api/v1/metric/body/heartrate` - Get heart rate data
+- `POST /api/v1/metric/body/heartrate` - Ingest heart rate data
+- `GET /api/v1/metric/body/composition` - Get body composition data
+- `POST /api/v1/metric/body/composition` - Ingest body composition data
 
-**Weight Tracking:**
-- `POST /api/weight` - Add weight measurement
-- `GET /api/weight` - Get all weight records
-- `PUT /api/weight/{id}` - Update weight record
-- `DELETE /api/weight/{id}` - Delete weight record
+**Calorie Metrics:**
+- `GET /api/v1/metric/calories/active` - Get active calories data
+- `POST /api/v1/metric/calories/active` - Ingest active calories data
+- `GET /api/v1/metric/calories/baseline` - Get baseline calories data
+- `POST /api/v1/metric/calories/baseline` - Ingest baseline calories data
+
+**Sleep Metrics:**
+- `GET /api/v1/metric/sleep/daily` - Get sleep data
+- `POST /api/v1/metric/sleep/daily` - Ingest sleep data
+
+**Nutrition:**
+- `GET /api/v1/nutrition/macros` - Get nutrition macro data
+- `POST /api/v1/nutrition/macros` - Ingest nutrition macro data
 
 **Goals:**
-- `POST /api/goals/weight` - Create weight goal
-- `GET /api/goals/weight` - Get weight goal
-- `PUT /api/goals/weight` - Update weight goal
-- `DELETE /api/goals/weight` - Delete weight goal
+- `GET /api/v1/goal/weight` - Get weight goals
+- `POST /api/v1/goal/weight` - Create weight goal
+- `PUT /api/v1/goal/weight/{id}` - Update weight goal
+- `DELETE /api/v1/goal/weight/{id}` - Delete weight goal
+- `GET /api/v1/goal/macros` - Get macro goals
+- `POST /api/v1/goal/macros` - Create macro goal
+- `GET /api/v1/goal/general` - Get general goals
+- `POST /api/v1/goal/general` - Create general goal
 
 ### Token Details
 
 - **Expiration**: 1 day (1440 minutes)
 - **Algorithm**: HS256
 - **Format**: Bearer token in Authorization header
-- **Refresh**: Use `/api/auth/refresh` endpoint to get a new token
+- **Refresh**: Use `/api/v1/auth/refresh` endpoint to get a new token
 
-## Diet & Nutrition Tracking API
+## Nutrition & Macro Tracking API
 
 The API provides comprehensive endpoints for tracking daily nutrition and macro intake.
 
-### Diet Endpoints
+### Nutrition Endpoints
 
-#### Add Single Diet Record
+#### Add Single Nutrition Record
 ```bash
-curl -X POST "http://localhost:8000/api/diet/record" \
+curl -X POST "http://localhost:8000/api/v1/nutrition/macros/record" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -519,69 +579,80 @@ curl -X POST "http://localhost:8000/api/diet/record" \
   }'
 ```
 
-#### Get All Diet Records
+#### Get All Nutrition Records
 ```bash
-curl -X GET "http://localhost:8000/api/diet" \
+curl -X GET "http://localhost:8000/api/v1/nutrition/macros" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Get Records for Specific Day
 ```bash
-curl -X GET "http://localhost:8000/api/diet/daily/2024-01-01" \
+curl -X GET "http://localhost:8000/api/v1/nutrition/macros/daily/2024-01-01" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Get Aggregated Records by Day
 ```bash
 # Get all aggregations
-curl -X GET "http://localhost:8000/api/diet/aggregate" \
+curl -X GET "http://localhost:8000/api/v1/nutrition/macros/aggregate" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 
 # Get aggregations for date range
-curl -X GET "http://localhost:8000/api/diet/aggregate?start_date=2024-01-01&end_date=2024-01-07" \
+curl -X GET "http://localhost:8000/api/v1/nutrition/macros/aggregate?start_date=2024-01-01&end_date=2024-01-07" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-#### Delete Diet Record
+#### Delete Nutrition Record
 ```bash
-curl -X DELETE "http://localhost:8000/api/diet/record/abc123def456" \
+curl -X DELETE "http://localhost:8000/api/v1/nutrition/macros/record/nutrition..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-#### Bulk Ingest Diet Data
+#### Bulk Ingest Nutrition Data
 ```bash
-curl -X POST "http://localhost:8000/api/ingest-diet" \
+curl -X POST "http://localhost:8000/api/v1/nutrition/macros" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "data": [
-      {
-        "datetime": "2024-01-01T08:00:00Z",
-        "protein": 25.5,
-        "carbs": 45.2,
-        "fat": 12.8,
-        "calories": 380,
-        "meal_name": "Breakfast",
-        "notes": "Oatmeal with berries"
-      },
-      {
-        "datetime": "2024-01-01T13:00:00Z",
-        "protein": 35.0,
-        "carbs": 60.0,
-        "fat": 20.0,
-        "calories": 520,
-        "meal_name": "Lunch",
-        "notes": "Chicken salad"
+    "record": {
+      "data": {
+        "metrics": [
+          {
+            "name": "nutrition_macros",
+            "data": [
+              {
+                "date": "2024-01-01T08:00:00Z",
+                "protein": 25.5,
+                "carbs": 45.2,
+                "fat": 12.8,
+                "calories": 380,
+                "meal_name": "Breakfast",
+                "notes": "Oatmeal with berries",
+                "source": "manual"
+              },
+              {
+                "date": "2024-01-01T13:00:00Z",
+                "protein": 35.0,
+                "carbs": 60.0,
+                "fat": 20.0,
+                "calories": 520,
+                "meal_name": "Lunch",
+                "notes": "Chicken salad",
+                "source": "manual"
+              }
+            ]
+          }
+        ]
       }
-    ]
+    }
   }'
 ```
 
-### Diet Data Structure
+### Nutrition Data Structure
 
-Each diet record contains:
-- **id**: RID identifier (format: `diet..<random-string>`)
-- **user_id**: User RID identifier (format: `user..<random-string>`)
+Each nutrition record contains:
+- **id**: RID identifier (format: `nutrition..<random-string>`)
+- **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **datetime**: When the meal was consumed (ISO format)
 - **protein**: Protein in grams
 - **carbs**: Carbohydrates in grams
@@ -589,6 +660,7 @@ Each diet record contains:
 - **calories**: Total calories
 - **meal_name**: Name of the meal (e.g., "Breakfast", "Lunch", "Dinner", "Snack")
 - **notes**: Additional notes about the meal
+- **source**: Data source (e.g., "manual", "apple_watch", "fitbit")
 
 ### Features
 
@@ -598,34 +670,36 @@ Each diet record contains:
 - ✅ **User isolation** - Users can only access their own data
 - ✅ **Flexible meal tracking** - Support for any meal names and notes
 
-## Weight Tracking API
+## Body Composition Tracking API
 
-The API provides endpoints for tracking weight measurements and body composition.
+The API provides endpoints for tracking body composition measurements including weight, body fat, and muscle mass.
 
-### Weight Endpoints
+### Body Composition Endpoints
 
-#### Add Weight Measurement
+#### Add Body Composition Measurement
 ```bash
-curl -X POST "http://localhost:8000/api/weight" \
+curl -X POST "http://localhost:8000/api/v1/metric/body/composition" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
+    "measurement_date": "2024-01-01T08:00:00Z",
     "weight": 70.5,
     "body_fat_percentage": 15.2,
     "muscle_mass_percentage": 45.8,
-    "notes": "Morning weight measurement"
+    "bone_density": 1.2,
+    "notes": "Morning measurement"
   }'
 ```
 
-#### Get All Weight Records
+#### Get All Body Composition Records
 ```bash
-curl -X GET "http://localhost:8000/api/weight" \
+curl -X GET "http://localhost:8000/api/v1/metric/body/composition" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-#### Update Weight Record
+#### Update Body Composition Record
 ```bash
-curl -X PUT "http://localhost:8000/api/weight/weight..abc123def456" \
+curl -X PUT "http://localhost:8000/api/v1/metric/body/composition/metric..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -634,51 +708,54 @@ curl -X PUT "http://localhost:8000/api/weight/weight..abc123def456" \
   }'
 ```
 
-#### Delete Weight Record
+#### Delete Body Composition Record
 ```bash
-curl -X DELETE "http://localhost:8000/api/weight/weight..abc123def456" \
+curl -X DELETE "http://localhost:8000/api/v1/metric/body/composition/metric..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-### Weight Data Structure
+### Body Composition Data Structure
 
-Each weight record contains:
-- **id**: RID identifier (format: `weight..<random-string>`)
-- **user_id**: User RID identifier (format: `user..<random-string>`)
+Each body composition record contains:
+- **id**: RID identifier (format: `metric..<random-string>`)
+- **user_id**: User RID identifier (format: `auth..user.<random-string>`)
+- **measurement_date**: Date and time of measurement (ISO format)
 - **weight**: Weight measurement in kg or lbs
 - **body_fat_percentage**: Body fat percentage (0-100)
 - **muscle_mass_percentage**: Muscle mass percentage (0-100)
+- **bone_density**: Bone density measurement
 - **notes**: Additional notes about the measurement
 - **created_at**: Timestamp when record was created
 - **updated_at**: Timestamp when record was last updated
 
 ## Goals API
 
-The API provides endpoints for managing user goals (weight, diet, and motivational messages).
+The API provides endpoints for managing user goals including weight, macro, and general goals.
 
 ### Goals Endpoints
 
 #### Create Weight Goal
 ```bash
-curl -X POST "http://localhost:8000/api/goals/weight" \
+curl -X POST "http://localhost:8000/api/v1/goal/weight" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
+    "date_hour": "2024-01-01T00:00:00Z",
     "weight": 65.0,
     "body_fat_percentage": 12.0,
     "muscle_mass_percentage": 48.0
   }'
 ```
 
-#### Get Weight Goal
+#### Get Weight Goals
 ```bash
-curl -X GET "http://localhost:8000/api/goals/weight" \
+curl -X GET "http://localhost:8000/api/v1/goal/weight" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Update Weight Goal
 ```bash
-curl -X PUT "http://localhost:8000/api/goals/weight" \
+curl -X PUT "http://localhost:8000/api/v1/goal/weight/goal..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -689,17 +766,63 @@ curl -X PUT "http://localhost:8000/api/goals/weight" \
 
 #### Delete Weight Goal
 ```bash
-curl -X DELETE "http://localhost:8000/api/goals/weight" \
+curl -X DELETE "http://localhost:8000/api/v1/goal/weight/goal..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+#### Create Macro Goal
+```bash
+curl -X POST "http://localhost:8000/api/v1/goal/macros" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date_hour": "2024-01-01T00:00:00Z",
+    "calories": 2000,
+    "protein": 150.0,
+    "carbs": 200.0,
+    "fat": 80.0
+  }'
+```
+
+#### Create General Goal
+```bash
+curl -X POST "http://localhost:8000/api/v1/goal/general" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal_description": "Run a 5K marathon",
+    "target_date": "2024-06-01T00:00:00Z"
+  }'
 ```
 
 ### Goals Data Structure
 
 **Weight Goals:**
-- **user_id**: User RID identifier (format: `user..<random-string>`) - Primary key
+- **id**: RID identifier (format: `goal..<random-string>`)
+- **user_id**: User RID identifier (format: `auth..user.<random-string>`)
+- **date_hour**: Target date and hour for the goal
 - **weight**: Target weight in kg or lbs
 - **body_fat_percentage**: Target body fat percentage
 - **muscle_mass_percentage**: Target muscle mass percentage
+- **created_at**: Timestamp when goal was created
+- **updated_at**: Timestamp when goal was last updated
+
+**Macro Goals:**
+- **id**: RID identifier (format: `goal..<random-string>`)
+- **user_id**: User RID identifier (format: `auth..user.<random-string>`)
+- **date_hour**: Target date and hour for the goal
+- **calories**: Target daily calories
+- **protein**: Target protein in grams
+- **carbs**: Target carbohydrates in grams
+- **fat**: Target fat in grams
+- **created_at**: Timestamp when goal was created
+- **updated_at**: Timestamp when goal was last updated
+
+**General Goals:**
+- **id**: RID identifier (format: `goal..<random-string>`)
+- **user_id**: User RID identifier (format: `auth..user.<random-string>`)
+- **goal_description**: Description of the general goal
+- **target_date**: Optional target date for completion
 - **created_at**: Timestamp when goal was created
 - **updated_at**: Timestamp when goal was last updated
 

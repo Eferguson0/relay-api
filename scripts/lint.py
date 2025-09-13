@@ -61,10 +61,16 @@ def main():
     ruff_cmd = f"uv run ruff check {' '.join(source_dirs)}"
     ruff_success = run_command(ruff_cmd, "Running linting with ruff", check=False)
 
+    # Run pyright (type checking)
+    pyright_cmd = f"uv run pyright {' '.join(source_dirs)}"
+    pyright_success = run_command(
+        pyright_cmd, "Running type checking with pyright", check=False
+    )
+
     print("=" * 50)
 
     # Summary
-    if isort_success and black_success and ruff_success:
+    if isort_success and black_success and ruff_success and pyright_success:
         print("🎉 All linting checks passed!")
         return 0
     else:
@@ -76,6 +82,8 @@ def main():
             print("   uv run black app scripts alembic")
         if not ruff_success:
             print("   uv run ruff check --fix app scripts alembic")
+        if not pyright_success:
+            print("   uv run pyright app scripts alembic")
         print()
         print("Or run: uv run lint-fix")
         return 1

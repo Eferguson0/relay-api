@@ -20,13 +20,16 @@ class ActivityWorkouts(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    workout_date = Column(DateTime(timezone=True), nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
     workout_name = Column(
         String, nullable=True
     )  # e.g., "Morning Run", "Weight Training"
     workout_type = Column(
         String, nullable=False
     )  # e.g., "cardio", "strength", "flexibility"
+    source = Column(
+        Enum(DataSource), nullable=False
+    )  # Source of the data (e.g., "Apple Watch", "Manual")
     duration_minutes = Column(Integer, nullable=True)  # Duration in minutes
     calories_burned = Column(Numeric, nullable=True)  # Calories burned during workout
     distance_miles = Column(Numeric, nullable=True)  # Distance covered in miles
@@ -41,7 +44,7 @@ class ActivityWorkouts(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Unique constraint to prevent duplicate workouts from same source
-    __table_args__ = (UniqueConstraint("user_id", "workout_date", "source"),)
+    __table_args__ = (UniqueConstraint("user_id", "date", "source"),)
 
     # Relationships
     user = relationship("AuthUser")

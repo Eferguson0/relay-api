@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -34,35 +34,6 @@ class SleepDailyCreate(BaseModel):
     notes: Optional[str] = Field(None, description="Additional notes about sleep")
 
 
-class SleepDailyUpdate(BaseModel):
-    sleep_date: Optional[datetime] = Field(None, description="Date of sleep")
-    bedtime: Optional[datetime] = Field(None, description="When user went to bed")
-    wake_time: Optional[datetime] = Field(None, description="When user woke up")
-    total_sleep_minutes: Optional[int] = Field(
-        None, ge=0, description="Total sleep duration in minutes"
-    )
-    deep_sleep_minutes: Optional[int] = Field(
-        None, ge=0, description="Deep sleep duration in minutes"
-    )
-    light_sleep_minutes: Optional[int] = Field(
-        None, ge=0, description="Light sleep duration in minutes"
-    )
-    rem_sleep_minutes: Optional[int] = Field(
-        None, ge=0, description="REM sleep duration in minutes"
-    )
-    awake_minutes: Optional[int] = Field(
-        None, ge=0, description="Time awake during sleep period"
-    )
-    sleep_efficiency: Optional[float] = Field(
-        None, ge=0, le=100, description="Sleep efficiency percentage"
-    )
-    sleep_quality_score: Optional[int] = Field(
-        None, ge=1, le=10, description="Sleep quality score (1-10)"
-    )
-    source: Optional[str] = Field(None, description="Source of the data")
-    notes: Optional[str] = Field(None, description="Additional notes about sleep")
-
-
 class SleepDailyResponse(BaseModel):
     id: str
     user_id: str
@@ -91,11 +62,6 @@ class SleepDailyCreateResponse(BaseModel):
     sleep: SleepDailyResponse
 
 
-class SleepDailyUpdateResponse(BaseModel):
-    message: str
-    sleep: SleepDailyResponse
-
-
 class SleepDailyDeleteResponse(BaseModel):
     message: str
     deleted_count: int
@@ -105,3 +71,18 @@ class SleepDailyExportResponse(BaseModel):
     records: list[SleepDailyResponse]
     total_count: int
     user_id: str
+
+
+# Bulk Operations Schemas
+class SleepDailyBulkCreate(BaseModel):
+    records: List[SleepDailyCreate] = Field(
+        ..., description="List of sleep records to create/update"
+    )
+
+
+class SleepDailyBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[SleepDailyResponse]

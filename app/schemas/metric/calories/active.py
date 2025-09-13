@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -42,10 +43,10 @@ class ActiveCaloriesIngestResponse(BaseModel):
 
 
 # Active Calories Export Response Schema
-class ActiveCaloriesRecord(BaseModel):
+class ActiveCaloriesExportRecord(BaseModel):
     id: str
     user_id: str
-    date: str
+    date_hour: str
     calories_burned: Optional[float]
     source: str
     created_at: Optional[str]
@@ -53,6 +54,53 @@ class ActiveCaloriesRecord(BaseModel):
 
 
 class ActiveCaloriesExportResponse(BaseModel):
-    records: List[ActiveCaloriesRecord]
+    records: List[ActiveCaloriesExportRecord]
     total_count: int
     user_id: str
+
+
+# CRUD Schemas
+class CaloriesActiveCreate(BaseModel):
+    date_hour: datetime = Field(
+        ..., description="Date and hour for the calories record"
+    )
+    calories_burned: Optional[float] = Field(None, ge=0, description="Calories burned")
+    source: str = Field(..., description="Source of the data")
+
+
+class CaloriesActiveResponse(BaseModel):
+    id: str
+    user_id: str
+    date_hour: datetime
+    calories_burned: Optional[float]
+    source: str
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class CaloriesActiveCreateResponse(BaseModel):
+    message: str
+    calories: CaloriesActiveResponse
+
+
+class CaloriesActiveDeleteResponse(BaseModel):
+    message: str
+    deleted_count: int
+
+
+# Bulk Operations Schemas
+class CaloriesActiveBulkCreate(BaseModel):
+    records: List[CaloriesActiveCreate] = Field(
+        ..., description="List of active calories records to create/update"
+    )
+
+
+class CaloriesActiveBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[CaloriesActiveResponse]

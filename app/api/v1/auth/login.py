@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.auth.user import User
+from app.models.auth.user import AuthUser
 from app.schemas.auth.user import Token, UserCreate, UserResponse
 from app.services.auth_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -19,11 +19,11 @@ from app.services.auth_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/auth/login", tags=["auth-login"])
+router = APIRouter(prefix="/login", tags=["auth-login"])
 
 
 @router.post("/", response_model=Token)
-async def login_for_access_token(
+async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     """User login endpoint"""
@@ -75,7 +75,9 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_access_token(current_user: User = Depends(get_current_active_user)):
+async def refresh_access_token(
+    current_user: AuthUser = Depends(get_current_active_user),
+):
     """Refresh access token for current user"""
     logger.info(f"Token refresh requested for user: {current_user.email}")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

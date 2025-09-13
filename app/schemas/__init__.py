@@ -30,30 +30,23 @@ from .goal.macros import (
     GoalMacrosUpdate,
     GoalMacrosUpdateResponse,
 )
-from .goal.weight import (
-    GoalWeightCreate,
-    GoalWeightCreateResponse,
-    GoalWeightDeleteResponse,
-    GoalWeightResponse,
-    GoalWeightUpdate,
-    GoalWeightUpdateResponse,
-)
 from .metric.activity.miles import (
     ActivityMilesCreate,
     ActivityMilesCreateResponse,
     ActivityMilesDeleteResponse,
     ActivityMilesExportResponse,
     ActivityMilesResponse,
-    ActivityMilesUpdate,
-    ActivityMilesUpdateResponse,
 )
 from .metric.activity.steps import (
-    HourlyStepsExportResponse,
-    HourlyStepsIngestRequest,
-    HourlyStepsIngestResponse,
+    ActivityStepsCreate,
+    ActivityStepsCreateResponse,
+    ActivityStepsDeleteResponse,
+    ActivityStepsExportResponse,
+    ActivityStepsIngestRequest,
+    ActivityStepsIngestResponse,
+    ActivityStepsResponse,
     StepsDataPoint,
     StepsMetric,
-    StepsRecord,
 )
 from .metric.activity.workouts import (
     ActivityWorkoutsCreate,
@@ -61,8 +54,6 @@ from .metric.activity.workouts import (
     ActivityWorkoutsDeleteResponse,
     ActivityWorkoutsExportResponse,
     ActivityWorkoutsResponse,
-    ActivityWorkoutsUpdate,
-    ActivityWorkoutsUpdateResponse,
 )
 
 # Metric schemas
@@ -72,16 +63,14 @@ from .metric.body.composition import (
     BodyCompositionDeleteResponse,
     BodyCompositionExportResponse,
     BodyCompositionResponse,
-    BodyCompositionUpdate,
-    BodyCompositionUpdateResponse,
 )
 from .metric.body.heartrate import (
-    HeartRateDataPoint,
+    HeartRateCreate,
+    HeartRateCreateResponse,
+    HeartRateDeleteResponse,
+    HeartRateExportRecord,
     HeartRateExportResponse,
-    HeartRateIngestRequest,
-    HeartRateIngestResponse,
-    HeartRateMetric,
-    HeartRateRecord,
+    HeartRateResponse,
 )
 from .metric.calories.active import (
     ActiveCaloriesDataPoint,
@@ -97,8 +86,6 @@ from .metric.calories.baseline import (
     CaloriesBaselineDeleteResponse,
     CaloriesBaselineExportResponse,
     CaloriesBaselineResponse,
-    CaloriesBaselineUpdate,
-    CaloriesBaselineUpdateResponse,
 )
 from .metric.sleep.daily import (
     SleepDailyCreate,
@@ -106,8 +93,6 @@ from .metric.sleep.daily import (
     SleepDailyDeleteResponse,
     SleepDailyExportResponse,
     SleepDailyResponse,
-    SleepDailyUpdate,
-    SleepDailyUpdateResponse,
 )
 
 # Nutrition schemas
@@ -147,53 +132,42 @@ __all__ = [
     "GoalMacrosCreateResponse",
     "GoalMacrosUpdateResponse",
     "GoalMacrosDeleteResponse",
-    "GoalWeightCreate",
-    "GoalWeightUpdate",
-    "GoalWeightResponse",
-    "GoalWeightCreateResponse",
-    "GoalWeightUpdateResponse",
-    "GoalWeightDeleteResponse",
     # Metric - Body
     "BodyCompositionCreate",
-    "BodyCompositionUpdate",
     "BodyCompositionResponse",
     "BodyCompositionCreateResponse",
-    "BodyCompositionUpdateResponse",
     "BodyCompositionDeleteResponse",
     "BodyCompositionExportResponse",
-    "HeartRateDataPoint",
-    "HeartRateMetric",
-    "HeartRateRecord",
-    "HeartRateIngestRequest",
-    "HeartRateIngestResponse",
+    "HeartRateCreate",
+    "HeartRateCreateResponse",
+    "HeartRateDeleteResponse",
+    "HeartRateExportRecord",
     "HeartRateExportResponse",
+    "HeartRateResponse",
     # Metric - Activity
     "StepsDataPoint",
     "StepsMetric",
-    "StepsRecord",
-    "HourlyStepsIngestRequest",
-    "HourlyStepsIngestResponse",
-    "HourlyStepsExportResponse",
+    "ActivityStepsCreate",
+    "ActivityStepsResponse",
+    "ActivityStepsCreateResponse",
+    "ActivityStepsDeleteResponse",
+    "ActivityStepsExportResponse",
+    "ActivityStepsIngestRequest",
+    "ActivityStepsIngestResponse",
     "ActivityMilesCreate",
-    "ActivityMilesUpdate",
     "ActivityMilesResponse",
     "ActivityMilesCreateResponse",
-    "ActivityMilesUpdateResponse",
     "ActivityMilesDeleteResponse",
     "ActivityMilesExportResponse",
     "ActivityWorkoutsCreate",
-    "ActivityWorkoutsUpdate",
     "ActivityWorkoutsResponse",
     "ActivityWorkoutsCreateResponse",
-    "ActivityWorkoutsUpdateResponse",
     "ActivityWorkoutsDeleteResponse",
     "ActivityWorkoutsExportResponse",
     # Metric - Calories
     "CaloriesBaselineCreate",
-    "CaloriesBaselineUpdate",
     "CaloriesBaselineResponse",
     "CaloriesBaselineCreateResponse",
-    "CaloriesBaselineUpdateResponse",
     "CaloriesBaselineDeleteResponse",
     "CaloriesBaselineExportResponse",
     "ActiveCaloriesDataPoint",
@@ -204,10 +178,8 @@ __all__ = [
     "ActiveCaloriesExportResponse",
     # Metric - Sleep
     "SleepDailyCreate",
-    "SleepDailyUpdate",
     "SleepDailyResponse",
     "SleepDailyCreateResponse",
-    "SleepDailyUpdateResponse",
     "SleepDailyDeleteResponse",
     "SleepDailyExportResponse",
     # Nutrition

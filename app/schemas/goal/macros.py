@@ -1,43 +1,33 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 
 # Goal Macros Schemas
 class GoalMacrosCreate(BaseModel):
-    date_hour: datetime = Field(..., description="Hour for the goal targets")
-    calories: Optional[float] = Field(None, ge=0, description="Target hourly calories")
-    protein: Optional[float] = Field(
-        None, ge=0, description="Target hourly protein in grams"
-    )
-    carbs: Optional[float] = Field(
-        None, ge=0, description="Target hourly carbs in grams"
-    )
-    fat: Optional[float] = Field(None, ge=0, description="Target hourly fat in grams")
+    calories: Optional[float] = Field(None, ge=0, description="Target calories")
+    protein: Optional[float] = Field(None, ge=0, description="Target protein in grams")
+    carbs: Optional[float] = Field(None, ge=0, description="Target carbs in grams")
+    fat: Optional[float] = Field(None, ge=0, description="Target fat in grams")
     calorie_deficit: Optional[float] = Field(
-        None, ge=0, description="Calorie deficit target for this hour"
+        None, ge=0, description="Calorie deficit target"
     )
 
 
 class GoalMacrosUpdate(BaseModel):
-    calories: Optional[float] = Field(None, ge=0, description="Target hourly calories")
-    protein: Optional[float] = Field(
-        None, ge=0, description="Target hourly protein in grams"
-    )
-    carbs: Optional[float] = Field(
-        None, ge=0, description="Target hourly carbs in grams"
-    )
-    fat: Optional[float] = Field(None, ge=0, description="Target hourly fat in grams")
+    calories: Optional[float] = Field(None, ge=0, description="Target calories")
+    protein: Optional[float] = Field(None, ge=0, description="Target protein in grams")
+    carbs: Optional[float] = Field(None, ge=0, description="Target carbs in grams")
+    fat: Optional[float] = Field(None, ge=0, description="Target fat in grams")
     calorie_deficit: Optional[float] = Field(
-        None, ge=0, description="Calorie deficit target for this hour"
+        None, ge=0, description="Calorie deficit target"
     )
 
 
 class GoalMacrosResponse(BaseModel):
     id: str
     user_id: str
-    date_hour: datetime
     calories: Optional[float]
     protein: Optional[float]
     carbs: Optional[float]
@@ -64,3 +54,18 @@ class GoalMacrosUpdateResponse(BaseModel):
 class GoalMacrosDeleteResponse(BaseModel):
     message: str
     deleted_count: int
+
+
+# Bulk Operations Schemas
+class GoalMacrosBulkCreate(BaseModel):
+    records: List[GoalMacrosCreate] = Field(
+        ..., description="List of macro goal records to create/update"
+    )
+
+
+class GoalMacrosBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[GoalMacrosResponse]

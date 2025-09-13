@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Column,
     DateTime,
+    Enum,
     ForeignKey,
     Numeric,
     String,
@@ -10,6 +11,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.session import Base
+from app.models.enums import DataSource
 
 
 class BodyComposition(Base):
@@ -17,7 +19,10 @@ class BodyComposition(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    measurement_date = Column(DateTime(timezone=True), nullable=False)
+    date_hour = Column(DateTime(timezone=True), nullable=False)
+    source = Column(
+        Enum(DataSource), nullable=False
+    )  # Source of the data (e.g., "Apple Watch", "Manual")
     weight = Column(Numeric, nullable=True)  # Weight in kg or lbs
     body_fat_percentage = Column(Numeric, nullable=True)  # Body fat percentage
     muscle_mass_percentage = Column(Numeric, nullable=True)  # Muscle mass percentage
@@ -31,7 +36,7 @@ class BodyComposition(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Unique constraint to prevent duplicate measurements on same date
-    __table_args__ = (UniqueConstraint("user_id", "measurement_date"),)
+    __table_args__ = (UniqueConstraint("user_id", "date_hour", "source"),)
 
     # Relationships
     user = relationship("AuthUser")

@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.auth.user import User
+from app.models.auth.user import AuthUser
 from app.models.goal.macros import GoalMacros
 from app.schemas.goal.macros import (
-    GoalMacrosCreate,
-    GoalMacrosCreateResponse,
+    GoalMacrosBulkCreate,
+    GoalMacrosBulkCreateResponse,
     GoalMacrosDeleteResponse,
     GoalMacrosResponse,
 )
@@ -19,81 +19,7 @@ from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/goal/macros", tags=["goal-macros"])
-
-
-@router.post("/", response_model=GoalMacrosCreateResponse)
-async def create_or_update_macro_goal(
-    goal_data: GoalMacrosCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Create or update a macro goal (upsert)"""
-    try:
-        # Check if user already has a macro goal for this date_hour
-        existing_goal = (
-            db.query(GoalMacros)
-            .filter(
-                GoalMacros.user_id == current_user.id,
-                GoalMacros.date_hour == goal_data.date_hour,
-            )
-            .first()
-        )
-
-        if existing_goal:
-            # Update existing goal
-            if goal_data.calories is not None:
-                existing_goal.calories = goal_data.calories
-            if goal_data.protein is not None:
-                existing_goal.protein = goal_data.protein
-            if goal_data.carbs is not None:
-                existing_goal.carbs = goal_data.carbs
-            if goal_data.fat is not None:
-                existing_goal.fat = goal_data.fat
-            if goal_data.notes is not None:
-                existing_goal.notes = goal_data.notes
-
-            db.commit()
-            db.refresh(existing_goal)
-
-            logger.info(
-                f"Updated macro goal for {current_user.id} at {goal_data.date_hour}"
-            )
-            return GoalMacrosCreateResponse(
-                message="Macro goal updated successfully", goal=existing_goal
-            )
-        else:
-            # Create new macro goal record
-            new_goal = GoalMacros(
-                id=generate_rid("goal", "macros"),
-                user_id=current_user.id,
-                date_hour=goal_data.date_hour,
-                calories=goal_data.calories,
-                protein=goal_data.protein,
-                carbs=goal_data.carbs,
-                fat=goal_data.fat,
-                notes=goal_data.notes,
-            )
-            db.add(new_goal)
-            db.commit()
-            db.refresh(new_goal)
-
-            logger.info(
-                f"Created macro goal for {current_user.id} at {goal_data.date_hour}"
-            )
-            return GoalMacrosCreateResponse(
-                message="Macro goal created successfully", goal=new_goal
-            )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error creating/updating macro goal: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating/updating goal: {str(e)}",
-        )
+router = APIRouter(prefix="/macros", tags=["goal-macros"])
 
 
 @router.get("/", response_model=list[GoalMacrosResponse])
@@ -101,7 +27,7 @@ async def get_macro_goals(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get macro goals for the user with optional date filtering"""
     try:
@@ -126,39 +52,77 @@ async def get_macro_goals(
         )
 
 
-@router.get("/{goal_id}", response_model=GoalMacrosResponse)
-async def get_macro_goal(
-    goal_id: str,
+@router.post("/bulk", response_model=GoalMacrosBulkCreateResponse)
+async def create_or_update_multiple_macro_goals(
+    bulk_data: GoalMacrosBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Get a specific macro goal by ID"""
+    """Create or update multiple macro goals (bulk upsert)"""
     try:
-        goal = (
-            db.query(GoalMacros)
-            .filter(
-                GoalMacros.id == goal_id,
-                GoalMacros.user_id == current_user.id,
+        created_count = 0
+        updated_count = 0
+        processed_records = []
+
+        for goal_data in bulk_data.records:
+            # Check if user already has a macro goal
+            existing_goal = (
+                db.query(GoalMacros)
+                .filter(GoalMacros.user_id == current_user.id)
+                .one_or_none()
             )
-            .first()
+
+            if existing_goal:
+                # Update existing goal
+                if goal_data.calories is not None:
+                    setattr(existing_goal, "calories", goal_data.calories)
+                if goal_data.protein is not None:
+                    setattr(existing_goal, "protein", goal_data.protein)
+                if goal_data.carbs is not None:
+                    setattr(existing_goal, "carbs", goal_data.carbs)
+                if goal_data.fat is not None:
+                    setattr(existing_goal, "fat", goal_data.fat)
+                if goal_data.calorie_deficit is not None:
+                    setattr(existing_goal, "calorie_deficit", goal_data.calorie_deficit)
+                processed_records.append(existing_goal)
+                updated_count += 1
+            else:
+                # Create new macro goal record
+                new_goal = GoalMacros(
+                    id=generate_rid("goal", "macros"),
+                    user_id=current_user.id,
+                    calories=goal_data.calories,
+                    protein=goal_data.protein,
+                    carbs=goal_data.carbs,
+                    fat=goal_data.fat,
+                    calorie_deficit=goal_data.calorie_deficit,
+                )
+                db.add(new_goal)
+                processed_records.append(new_goal)
+                created_count += 1
+
+        # Commit all changes at once
+        db.commit()
+
+        logger.info(
+            f"Bulk processed {len(bulk_data.records)} macro goals for {current_user.id}: "
+            f"{created_count} created, {updated_count} updated"
         )
 
-        if not goal:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Macro goal not found",
-            )
+        return GoalMacrosBulkCreateResponse(
+            message=f"Bulk operation completed: {created_count} created, {updated_count} updated",
+            created_count=created_count,
+            updated_count=updated_count,
+            total_processed=len(bulk_data.records),
+            records=processed_records,
+        )
 
-        logger.info(f"Retrieved macro goal {goal_id} for {current_user.id}")
-        return goal
-
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error retrieving macro goal: {str(e)}")
+        logger.error(f"Error in bulk upsert of macro goals: {str(e)}")
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving goal: {str(e)}",
+            detail=f"Error in bulk upsert: {str(e)}",
         )
 
 
@@ -166,7 +130,7 @@ async def get_macro_goal(
 async def delete_macro_goal(
     goal_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Delete a specific macro goal"""
     try:

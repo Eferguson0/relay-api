@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.auth.user import User
+from app.models.auth.user import AuthUser
 from app.models.metric.activity.workouts import ActivityWorkouts
 from app.schemas.metric.activity.workouts import (
-    ActivityWorkoutsCreate,
-    ActivityWorkoutsCreateResponse,
+    ActivityWorkoutsBulkCreate,
+    ActivityWorkoutsBulkCreateResponse,
     ActivityWorkoutsDeleteResponse,
     ActivityWorkoutsResponse,
 )
@@ -19,7 +19,7 @@ from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/metric/workouts", tags=["metric-workouts"])
+router = APIRouter(prefix="/workouts", tags=["metric-workouts"])
 
 
 @router.get("/", response_model=list[ActivityWorkoutsResponse])
@@ -27,7 +27,7 @@ async def get_activity_workouts(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get activity workouts data"""
     try:
@@ -60,7 +60,7 @@ async def get_activity_workouts(
 async def get_activity_workout_record(
     record_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get a specific activity workout record by ID"""
     try:
@@ -94,74 +94,108 @@ async def get_activity_workout_record(
         )
 
 
-@router.post("/", response_model=ActivityWorkoutsCreateResponse)
-async def create_or_update_activity_workout_record(
-    workout_data: ActivityWorkoutsCreate,
+@router.post("/bulk", response_model=ActivityWorkoutsBulkCreateResponse)
+async def create_or_update_multiple_workout_records(
+    bulk_data: ActivityWorkoutsBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Create or update an activity workout record (upsert)"""
+    """Create or update multiple workout records (bulk upsert)"""
     try:
-        # Check if record already exists for this workout_date and source
-        existing_record = (
-            db.query(ActivityWorkouts)
-            .filter(
-                ActivityWorkouts.user_id == current_user.id,
-                ActivityWorkouts.workout_date == workout_data.workout_date,
-                ActivityWorkouts.source == workout_data.source,
+        created_count = 0
+        updated_count = 0
+        processed_records = []
+
+        for workout_data in bulk_data.records:
+            # Check if record already exists for this date and source
+            existing_record = (
+                db.query(ActivityWorkouts)
+                .filter(
+                    ActivityWorkouts.user_id == current_user.id,
+                    ActivityWorkouts.date == workout_data.date,
+                    ActivityWorkouts.source == workout_data.source,
+                )
+                .one_or_none()
             )
-            .first()
+
+            if existing_record:
+                # Update existing record
+                if workout_data.workout_name is not None:
+                    setattr(existing_record, "workout_name", workout_data.workout_name)
+                if workout_data.workout_type is not None:
+                    setattr(existing_record, "workout_type", workout_data.workout_type)
+                if workout_data.duration_minutes is not None:
+                    setattr(
+                        existing_record,
+                        "duration_minutes",
+                        workout_data.duration_minutes,
+                    )
+                if workout_data.calories_burned is not None:
+                    setattr(
+                        existing_record, "calories_burned", workout_data.calories_burned
+                    )
+                if workout_data.distance_miles is not None:
+                    setattr(
+                        existing_record, "distance_miles", workout_data.distance_miles
+                    )
+                if workout_data.avg_heart_rate is not None:
+                    setattr(
+                        existing_record, "avg_heart_rate", workout_data.avg_heart_rate
+                    )
+                if workout_data.max_heart_rate is not None:
+                    setattr(
+                        existing_record, "max_heart_rate", workout_data.max_heart_rate
+                    )
+                if workout_data.intensity is not None:
+                    setattr(existing_record, "intensity", workout_data.intensity)
+                if workout_data.notes is not None:
+                    setattr(existing_record, "notes", workout_data.notes)
+                setattr(existing_record, "updated_at", datetime.utcnow())
+                processed_records.append(existing_record)
+                updated_count += 1
+            else:
+                # Create new workout record
+                new_record = ActivityWorkouts(
+                    id=generate_rid("metric", "activity_workouts"),
+                    user_id=current_user.id,
+                    date=workout_data.date,
+                    workout_name=workout_data.workout_name,
+                    workout_type=workout_data.workout_type,
+                    duration_minutes=workout_data.duration_minutes,
+                    calories_burned=workout_data.calories_burned,
+                    distance_miles=workout_data.distance_miles,
+                    avg_heart_rate=workout_data.avg_heart_rate,
+                    max_heart_rate=workout_data.max_heart_rate,
+                    intensity=workout_data.intensity,
+                    source=workout_data.source,
+                    notes=workout_data.notes,
+                )
+                db.add(new_record)
+                processed_records.append(new_record)
+                created_count += 1
+
+        # Commit all changes at once
+        db.commit()
+
+        logger.info(
+            f"Bulk processed {len(bulk_data.records)} workout records for {current_user.id}: "
+            f"{created_count} created, {updated_count} updated"
         )
 
-        if existing_record:
-            # Update existing record
-            if workout_data.workout_type is not None:
-                existing_record.workout_type = workout_data.workout_type
-            if workout_data.duration_minutes is not None:
-                existing_record.duration_minutes = workout_data.duration_minutes
-            if workout_data.calories_burned is not None:
-                existing_record.calories_burned = workout_data.calories_burned
-            if workout_data.notes is not None:
-                existing_record.notes = workout_data.notes
+        return ActivityWorkoutsBulkCreateResponse(
+            message=f"Bulk operation completed: {created_count} created, {updated_count} updated",
+            created_count=created_count,
+            updated_count=updated_count,
+            total_processed=len(bulk_data.records),
+            records=processed_records,
+        )
 
-            db.commit()
-            db.refresh(existing_record)
-
-            logger.info(f"Updated activity workout record for {current_user.id}")
-            return ActivityWorkoutsCreateResponse(
-                message="Activity workout record updated successfully",
-                record=existing_record,
-            )
-        else:
-            # Create new activity workout record
-            new_record = ActivityWorkouts(
-                id=generate_rid("metric", "activity_workouts"),
-                user_id=current_user.id,
-                workout_date=workout_data.workout_date,
-                workout_type=workout_data.workout_type,
-                duration_minutes=workout_data.duration_minutes,
-                calories_burned=workout_data.calories_burned,
-                source=workout_data.source,
-                notes=workout_data.notes,
-            )
-            db.add(new_record)
-            db.commit()
-            db.refresh(new_record)
-
-            logger.info(f"Created activity workout record for {current_user.id}")
-            return ActivityWorkoutsCreateResponse(
-                message="Activity workout record created successfully",
-                record=new_record,
-            )
-
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error creating/updating activity workout record: {str(e)}")
+        logger.error(f"Error in bulk upsert of workout records: {str(e)}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating/updating record: {str(e)}",
+            detail=f"Error in bulk upsert: {str(e)}",
         )
 
 
@@ -169,7 +203,7 @@ async def create_or_update_activity_workout_record(
 async def delete_activity_workout_record(
     record_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Delete an activity workout record"""
     try:

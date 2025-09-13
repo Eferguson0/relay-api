@@ -17,9 +17,6 @@ class GoalMacros(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    date_hour = Column(
-        DateTime(timezone=True), nullable=False
-    )  # Hour for the goal targets
     calories = Column(Numeric, nullable=True)  # Target hourly calories
     protein = Column(Numeric, nullable=True)  # Target hourly protein in grams
     carbs = Column(Numeric, nullable=True)  # Target hourly carbs in grams
@@ -29,9 +26,7 @@ class GoalMacros(Base):
     )  # Calorie deficit target for this hour
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Unique constraint to ensure one goal per user per hour
-    __table_args__ = (UniqueConstraint("user_id", "date_hour"),)
+    __table_args__ = (UniqueConstraint("user_id"),)
 
     # Relationships
     user = relationship("AuthUser")

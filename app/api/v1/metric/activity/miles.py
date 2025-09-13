@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.auth.user import User
+from app.models.auth.user import AuthUser
 from app.models.metric.activity.miles import ActivityMiles
 from app.schemas.metric.activity.miles import (
-    ActivityMilesCreate,
-    ActivityMilesCreateResponse,
+    ActivityMilesBulkCreate,
+    ActivityMilesBulkCreateResponse,
     ActivityMilesDeleteResponse,
     ActivityMilesResponse,
 )
@@ -19,7 +19,7 @@ from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/metric/miles", tags=["metric-miles"])
+router = APIRouter(prefix="/miles", tags=["metric-miles"])
 
 
 @router.get("/", response_model=list[ActivityMilesResponse])
@@ -27,7 +27,7 @@ async def get_activity_miles(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get activity miles data"""
     try:
@@ -58,7 +58,7 @@ async def get_activity_miles(
 async def get_activity_mile_record(
     record_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get a specific activity miles record by ID"""
     try:
@@ -92,67 +92,75 @@ async def get_activity_mile_record(
         )
 
 
-@router.post("/", response_model=ActivityMilesCreateResponse)
-async def create_or_update_activity_miles_record(
-    miles_data: ActivityMilesCreate,
+@router.post("/bulk", response_model=ActivityMilesBulkCreateResponse)
+async def create_or_update_multiple_activity_miles_records(
+    bulk_data: ActivityMilesBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Create or update an activity miles record (upsert)"""
+    """Create or update multiple activity miles records (bulk upsert)"""
     try:
-        # Check if record already exists for this date and source
-        existing_record = (
-            db.query(ActivityMiles)
-            .filter(
-                ActivityMiles.user_id == current_user.id,
-                ActivityMiles.date == miles_data.date,
-                ActivityMiles.source == miles_data.source,
+        created_count = 0
+        updated_count = 0
+        processed_records = []
+
+        for miles_data in bulk_data.records:
+            # Check if record already exists for this date and source
+            existing_record = (
+                db.query(ActivityMiles)
+                .filter(
+                    ActivityMiles.user_id == current_user.id,
+                    ActivityMiles.date_hour == miles_data.date_hour,
+                    ActivityMiles.source == miles_data.source,
+                )
+                .one_or_none()
             )
-            .first()
+
+            if existing_record:
+                # Update existing record
+                if miles_data.miles is not None:
+                    setattr(existing_record, "miles", miles_data.miles)
+                if miles_data.activity_type is not None:
+                    setattr(existing_record, "activity_type", miles_data.activity_type)
+                setattr(existing_record, "updated_at", datetime.utcnow())
+                processed_records.append(existing_record)
+                updated_count += 1
+            else:
+                # Create new activity miles record
+                new_record = ActivityMiles(
+                    id=generate_rid("metric", "activity_miles"),
+                    user_id=current_user.id,
+                    date_hour=miles_data.date_hour,
+                    miles=miles_data.miles,
+                    activity_type=miles_data.activity_type,
+                    source=miles_data.source,
+                )
+                db.add(new_record)
+                processed_records.append(new_record)
+                created_count += 1
+
+        # Commit all changes at once
+        db.commit()
+
+        logger.info(
+            f"Bulk processed {len(bulk_data.records)} activity miles records for {current_user.id}: "
+            f"{created_count} created, {updated_count} updated"
         )
 
-        if existing_record:
-            # Update existing record
-            if miles_data.miles is not None:
-                existing_record.miles = miles_data.miles
-            if miles_data.notes is not None:
-                existing_record.notes = miles_data.notes
+        return ActivityMilesBulkCreateResponse(
+            message=f"Bulk operation completed: {created_count} created, {updated_count} updated",
+            created_count=created_count,
+            updated_count=updated_count,
+            total_processed=len(bulk_data.records),
+            records=processed_records,
+        )
 
-            db.commit()
-            db.refresh(existing_record)
-
-            logger.info(f"Updated activity miles record for {current_user.id}")
-            return ActivityMilesCreateResponse(
-                message="Activity miles record updated successfully",
-                record=existing_record,
-            )
-        else:
-            # Create new activity miles record
-            new_record = ActivityMiles(
-                id=generate_rid("metric", "activity_miles"),
-                user_id=current_user.id,
-                date=miles_data.date,
-                miles=miles_data.miles,
-                source=miles_data.source,
-                notes=miles_data.notes,
-            )
-            db.add(new_record)
-            db.commit()
-            db.refresh(new_record)
-
-            logger.info(f"Created activity miles record for {current_user.id}")
-            return ActivityMilesCreateResponse(
-                message="Activity miles record created successfully", record=new_record
-            )
-
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error creating/updating activity miles record: {str(e)}")
+        logger.error(f"Error in bulk upsert of activity miles records: {str(e)}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creating/updating record: {str(e)}",
+            detail=f"Error in bulk upsert: {str(e)}",
         )
 
 
@@ -160,7 +168,7 @@ async def create_or_update_activity_miles_record(
 async def delete_activity_miles_record(
     record_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Delete an activity miles record"""
     try:

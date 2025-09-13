@@ -21,7 +21,7 @@ class SleepDaily(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    sleep_date = Column(
+    date_day = Column(
         DateTime(timezone=True), nullable=False
     )  # Date of sleep (start of sleep day)
     bedtime = Column(DateTime(timezone=True), nullable=True)  # When user went to bed
@@ -47,7 +47,7 @@ class SleepDaily(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Unique constraint to ensure one record per user per sleep date per source
-    __table_args__ = (UniqueConstraint("user_id", "sleep_date", "source"),)
+    __table_args__ = (UniqueConstraint("user_id", "date_day", "source"),)
 
     # Relationships
     user = relationship("AuthUser")

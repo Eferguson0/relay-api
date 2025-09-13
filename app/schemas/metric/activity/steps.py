@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -18,37 +19,64 @@ class StepsMetric(BaseModel):
     data: List[StepsDataPoint] = Field(..., description="List of steps data points")
 
 
-# Steps Record Schema
-class StepsRecord(BaseModel):
-    data: StepsMetric = Field(..., description="Steps metric data")
+# Activity Steps Schemas
+class ActivityStepsCreate(BaseModel):
+    date_hour: datetime = Field(..., description="Date and hour for the steps record")
+    steps: Optional[int] = Field(None, ge=0, description="Number of steps")
+    source: str = Field(..., description="Source of the data")
 
 
-# Steps Ingest Request Schema
-class HourlyStepsIngestRequest(BaseModel):
-    record: StepsRecord = Field(..., description="Steps record data")
-
-
-# Steps Ingest Response Schema
-class HourlyStepsIngestResponse(BaseModel):
-    message: str
-    records_processed: int
-    metrics_processed: List[str]
-    user_id: str
-    source: str
-
-
-# Steps Export Response Schema
-class StepsRecord(BaseModel):
+class ActivityStepsResponse(BaseModel):
     id: str
     user_id: str
-    date: str
+    date_hour: datetime
     steps: Optional[int]
     source: str
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
 
 
-class HourlyStepsExportResponse(BaseModel):
-    records: List[StepsRecord]
+# Response schemas
+class ActivityStepsCreateResponse(BaseModel):
+    message: str
+    record: ActivityStepsResponse
+
+
+class ActivityStepsDeleteResponse(BaseModel):
+    message: str
+    deleted_count: int
+
+
+class ActivityStepsExportResponse(BaseModel):
+    records: List[ActivityStepsResponse]
     total_count: int
     user_id: str
+
+
+# Ingest schemas
+class ActivityStepsIngestRequest(BaseModel):
+    record: ActivityStepsCreate = Field(..., description="Steps record data")
+
+
+class ActivityStepsIngestResponse(BaseModel):
+    message: str
+    records_processed: int
+    user_id: str
+
+
+# Bulk Operations Schemas
+class ActivityStepsBulkCreate(BaseModel):
+    records: List[ActivityStepsCreate] = Field(
+        ..., description="List of steps records to create/update"
+    )
+
+
+class ActivityStepsBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[ActivityStepsResponse]

@@ -1,5 +1,4 @@
 from sqlalchemy import (
-    CheckConstraint,
     Column,
     DateTime,
     Enum,
@@ -21,7 +20,7 @@ class BodyHeartRate(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    date = Column(
+    date_hour = Column(
         DateTime(timezone=True), nullable=False
     )  # Store full datetime for hourly data
     heart_rate = Column(Integer, nullable=True)  # Single heart rate reading
@@ -35,29 +34,7 @@ class BodyHeartRate(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Unique constraint and check constraints
-    __table_args__ = (
-        UniqueConstraint("user_id", "date", "source"),
-        CheckConstraint(
-            "heart_rate IS NULL OR (heart_rate >= 0 AND heart_rate <= 300)",
-            name="hourly_heart_rate_hr_check",
-        ),
-        CheckConstraint(
-            "min_hr IS NULL OR (min_hr >= 0 AND min_hr <= 300)",
-            name="hourly_heart_rate_min_hr_check",
-        ),
-        CheckConstraint(
-            "avg_hr IS NULL OR (avg_hr >= 0 AND avg_hr <= 300)",
-            name="hourly_heart_rate_avg_hr_check",
-        ),
-        CheckConstraint(
-            "max_hr IS NULL OR (max_hr >= 0 AND max_hr <= 300)",
-            name="hourly_heart_rate_max_hr_check",
-        ),
-        CheckConstraint(
-            "resting_hr IS NULL OR (resting_hr >= 0 AND resting_hr <= 300)",
-            name="hourly_heart_rate_resting_hr_check",
-        ),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "date_hour", "source"),)
 
     # Relationships
     user = relationship("AuthUser")

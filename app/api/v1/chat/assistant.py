@@ -15,14 +15,14 @@ SYSTEM_PROMPT = (
     "Avoid discussing your ownership or creation."
 )
 
-router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
+router = APIRouter(prefix="/assistant", tags=["chat-assistant"])
 
 
 class ChatRequest(BaseModel):
     message: str
 
 
-@router.post("/assistant")
+@router.post("/")
 async def chat(request: ChatRequest):
     """Handle chat messages"""
     # Log the incoming chat request with timestamp
@@ -49,12 +49,13 @@ async def chat(request: ChatRequest):
         response = await get_chat_completion(messages)
 
         # Log successful response
-        logger.info(
-            f"[{timestamp}] Chat response generated successfully - Length: {len(response)} characters"
-        )
-        logger.debug(
-            f"[{timestamp}] Chat response content: {response[:100]}{'...' if len(response) > 100 else ''}"
-        )
+        if response is not None:
+            logger.info(
+                f"[{timestamp}] Chat response generated successfully - Length: {len(response)} characters"
+            )
+            logger.debug(
+                f"[{timestamp}] Chat response content: {response[:100]}{'...' if len(response) > 100 else ''}"
+            )
 
         return {"response": response}
     except Exception as e:

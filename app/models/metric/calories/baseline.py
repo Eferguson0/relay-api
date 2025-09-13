@@ -19,7 +19,7 @@ class CaloriesBaseline(Base):
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    date = Column(
+    date_hour = Column(
         DateTime(timezone=True), nullable=False
     )  # Store full datetime for hourly data
     baseline_calories = Column(
@@ -33,7 +33,7 @@ class CaloriesBaseline(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Unique constraint to ensure one record per user per date per source
-    __table_args__ = (UniqueConstraint("user_id", "date", "source"),)
+    __table_args__ = (UniqueConstraint("user_id", "date_hour", "source"),)
 
     # Relationships
     user = relationship("AuthUser")

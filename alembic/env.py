@@ -13,7 +13,6 @@ from app.models.auth.user import AuthUser
 from app.models.enums import DataSource
 from app.models.goal.general import GoalGeneral
 from app.models.goal.macros import GoalMacros
-from app.models.goal.weight import GoalWeight
 from app.models.metric.activity.miles import ActivityMiles
 from app.models.metric.activity.steps import ActivitySteps
 from app.models.metric.activity.workouts import ActivityWorkouts
@@ -29,7 +28,6 @@ _ = [
     DataSource,
     GoalGeneral,
     GoalMacros,
-    GoalWeight,
     BodyComposition,
     BodyHeartRate,
     ActivitySteps,
@@ -99,9 +97,9 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = get_url()
+    configuration["sqlalchemy.url"] = get_url()  # type: ignore
     connectable = engine_from_config(
-        configuration,
+        configuration,  # type: ignore
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

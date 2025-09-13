@@ -7,28 +7,27 @@ from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.auth.user import User
+from app.models.auth.user import AuthUser
 from app.models.metric.body.composition import BodyComposition
 from app.schemas.metric.body.composition import (
-    BodyCompositionCreate,
-    BodyCompositionCreateResponse,
+    BodyCompositionBulkCreate,
+    BodyCompositionBulkCreateResponse,
     BodyCompositionDeleteResponse,
     BodyCompositionExportResponse,
+    BodyCompositionResponse,
 )
 from app.services.auth_service import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(
-    prefix="/api/v1/metric/body/composition", tags=["metric-body-composition"]
-)
+router = APIRouter(prefix="/composition", tags=["metric-body-composition"])
 
 
 @router.get("/")
 async def get_body_composition(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
     """Get body composition data (weight, body fat, muscle mass)"""
@@ -49,10 +48,15 @@ async def get_body_composition(
 
         records = query.all()
 
+        # Convert model objects to response objects
+        records_data = [
+            BodyCompositionResponse.model_validate(record) for record in records
+        ]
+
         return BodyCompositionExportResponse(
-            records=records,
-            total_count=len(records),
-            user_id=current_user.id,
+            records=records_data,
+            total_count=len(records_data),
+            user_id=str(current_user.id),
         )
 
     except Exception as e:
@@ -63,76 +67,118 @@ async def get_body_composition(
         )
 
 
-@router.post("/", response_model=BodyCompositionCreateResponse)
-async def create_or_update_body_composition_record(
-    weight_data: BodyCompositionCreate,
-    current_user: User = Depends(get_current_active_user),
+@router.post("/bulk", response_model=BodyCompositionBulkCreateResponse)
+async def create_or_update_multiple_body_composition_records(
+    bulk_data: BodyCompositionBulkCreate,
     db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Create or update a body composition measurement record (upsert)"""
+    """Create or update multiple body composition records (bulk upsert)"""
     try:
-        # Check if record already exists for this user (one record per user for body composition)
-        existing_record = (
-            db.query(BodyComposition)
-            .filter(BodyComposition.user_id == current_user.id)
-            .first()
+        created_count = 0
+        updated_count = 0
+        processed_records = []
+
+        for composition_data in bulk_data.records:
+            # Check if record already exists for this user (one record per user for body composition)
+            existing_record = (
+                db.query(BodyComposition)
+                .filter(BodyComposition.user_id == current_user.id)
+                .one_or_none()
+            )
+
+            if existing_record:
+                # Update existing record
+                if composition_data.weight is not None:
+                    setattr(existing_record, "weight", composition_data.weight)
+                if composition_data.body_fat_percentage is not None:
+                    setattr(
+                        existing_record,
+                        "body_fat_percentage",
+                        composition_data.body_fat_percentage,
+                    )
+                if composition_data.muscle_mass_percentage is not None:
+                    setattr(
+                        existing_record,
+                        "muscle_mass_percentage",
+                        composition_data.muscle_mass_percentage,
+                    )
+                if composition_data.bone_density is not None:
+                    setattr(
+                        existing_record, "bone_density", composition_data.bone_density
+                    )
+                if composition_data.water_percentage is not None:
+                    setattr(
+                        existing_record,
+                        "water_percentage",
+                        composition_data.water_percentage,
+                    )
+                if composition_data.visceral_fat is not None:
+                    setattr(
+                        existing_record, "visceral_fat", composition_data.visceral_fat
+                    )
+                if composition_data.bmr is not None:
+                    setattr(existing_record, "bmr", composition_data.bmr)
+                if composition_data.measurement_method is not None:
+                    setattr(
+                        existing_record,
+                        "measurement_method",
+                        composition_data.measurement_method,
+                    )
+                if composition_data.notes is not None:
+                    setattr(existing_record, "notes", composition_data.notes)
+                setattr(existing_record, "updated_at", datetime.utcnow())
+                processed_records.append(existing_record)
+                updated_count += 1
+            else:
+                # Create new body composition record
+                new_record = BodyComposition(
+                    id=generate_rid("metric", "body_composition"),
+                    user_id=current_user.id,
+                    measurement_date=composition_data.measurement_date,
+                    weight=composition_data.weight,
+                    body_fat_percentage=composition_data.body_fat_percentage,
+                    muscle_mass_percentage=composition_data.muscle_mass_percentage,
+                    bone_density=composition_data.bone_density,
+                    water_percentage=composition_data.water_percentage,
+                    visceral_fat=composition_data.visceral_fat,
+                    bmr=composition_data.bmr,
+                    measurement_method=composition_data.measurement_method,
+                    notes=composition_data.notes,
+                )
+                db.add(new_record)
+                processed_records.append(new_record)
+                created_count += 1
+
+        # Commit all changes at once
+        db.commit()
+
+        logger.info(
+            f"Bulk processed {len(bulk_data.records)} body composition records for {current_user.id}: "
+            f"{created_count} created, {updated_count} updated"
         )
 
-        if existing_record:
-            # Update existing record
-            if weight_data.weight is not None:
-                existing_record.weight = weight_data.weight
-            if weight_data.body_fat_percentage is not None:
-                existing_record.body_fat_percentage = weight_data.body_fat_percentage
-            if weight_data.muscle_mass_percentage is not None:
-                existing_record.muscle_mass_percentage = (
-                    weight_data.muscle_mass_percentage
-                )
-            if weight_data.notes is not None:
-                existing_record.notes = weight_data.notes
+        return BodyCompositionBulkCreateResponse(
+            message=f"Bulk operation completed: {created_count} created, {updated_count} updated",
+            created_count=created_count,
+            updated_count=updated_count,
+            total_processed=len(bulk_data.records),
+            records=processed_records,
+        )
 
-            db.commit()
-            db.refresh(existing_record)
-
-            logger.info(f"Updated body composition record for {current_user.id}")
-            return BodyCompositionCreateResponse(
-                message="Body composition record updated successfully",
-                weight=existing_record,
-            )
-        else:
-            # Create new weight record
-            new_weight = BodyComposition(
-                id=generate_rid("metric", "body_composition"),
-                user_id=current_user.id,
-                weight=weight_data.weight,
-                body_fat_percentage=weight_data.body_fat_percentage,
-                muscle_mass_percentage=weight_data.muscle_mass_percentage,
-                notes=weight_data.notes,
-            )
-            db.add(new_weight)
-            db.commit()
-            db.refresh(new_weight)
-
-            logger.info(f"Created body composition record for {current_user.id}")
-            return BodyCompositionCreateResponse(
-                message="Body composition record created successfully",
-                weight=new_weight,
-            )
-
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error creating/updating body composition record: {str(e)}")
+        logger.error(f"Error in bulk upsert of body composition records: {str(e)}")
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create/update body composition record",
+            detail=f"Error in bulk upsert: {str(e)}",
         )
 
 
 @router.delete("/{weight_id}", response_model=BodyCompositionDeleteResponse)
 async def delete_body_composition_record(
     weight_id: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
     """Delete a body composition measurement record"""

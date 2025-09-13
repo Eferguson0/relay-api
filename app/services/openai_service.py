@@ -46,10 +46,15 @@ async def get_chat_completion(messages: list, model: str = "gpt-3.5-turbo"):
         )
 
         # Log successful API response
-        response_content = response.choices[0].message.content
-        logger.info(
-            f"[{timestamp}] OpenAI API call successful - Response length: {len(response_content)} characters"
-        )
+        response_content: str | None = response.choices[0].message.content
+        if response_content is not None:
+            logger.info(
+                f"[{timestamp}] OpenAI API call successful - Response length: {len(response_content)} characters"
+            )
+        else:
+            logger.warning(
+                f"[{timestamp}] OpenAI API call successful but returned no content"
+            )
 
         # Log usage information if available
         if hasattr(response, "usage") and response.usage:

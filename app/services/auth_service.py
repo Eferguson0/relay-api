@@ -59,7 +59,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[AuthUs
     user = db.query(AuthUser).filter(AuthUser.email == email).first()
     if not user:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.hashed_password):  # type: ignore
         return None
     return user
 
@@ -86,7 +86,7 @@ def verify_token(token: str) -> Optional[str]:
     """Verify JWT token and return the email if valid"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        email: str | None = payload.get("sub")
         if email is None:
             return None
         return email
@@ -124,6 +124,6 @@ def get_current_active_user(
     current_user: AuthUser = Depends(get_current_user),
 ) -> AuthUser:
     """Get current active user"""
-    if not current_user.is_active:
+    if not current_user.is_active:  # type: ignore
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
