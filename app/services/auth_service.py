@@ -2,14 +2,15 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.rid import generate_rid
 from app.db.session import get_db
-from app.models.user import User
+from app.models.auth.user import AuthUser
 
 # Security configuration
 SECRET_KEY = settings.SECRET_KEY
@@ -54,24 +55,27 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
-def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(db: Session, email: str, password: str) -> Optional[AuthUser]:
+    user = db.query(AuthUser).filter(AuthUser.email == email).first()
     if not user:
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.hashed_password):  # type: ignore
         return None
     return user
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
+def get_user_by_email(db: Session, email: str) -> Optional[AuthUser]:
+    return db.query(AuthUser).filter(AuthUser.email == email).first()
 
 
 def create_user(
     db: Session, email: str, password: str, full_name: Optional[str] = None
-) -> User:
+) -> AuthUser:
     hashed_password = get_password_hash(password)
-    db_user = User(email=email, hashed_password=hashed_password, full_name=full_name)
+    user_id = generate_rid("auth", "user")
+    db_user = AuthUser(
+        id=user_id, email=email, hashed_password=hashed_password, full_name=full_name
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -82,7 +86,7 @@ def verify_token(token: str) -> Optional[str]:
     """Verify JWT token and return the email if valid"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        email: str | None = payload.get("sub")
         if email is None:
             return None
         return email
@@ -93,7 +97,7 @@ def verify_token(token: str) -> Optional[str]:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     db: Session = Depends(get_db),
-) -> User:
+) -> AuthUser:
     """Get current authenticated user from JWT token"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,8 +120,10 @@ def get_current_user(
     return user
 
 
-def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+def get_current_active_user(
+    current_user: AuthUser = Depends(get_current_user),
+) -> AuthUser:
     """Get current active user"""
-    if not current_user.is_active:
+    if not current_user.is_active:  # type: ignore
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

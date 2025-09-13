@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 
-from app.api import auth, chat, diet, export, goals, heart_rate, system, weight
+from app.api.v1.main import router as v1_router
 from app.db.init_db import create_first_superuser, init_db
 from app.db.session import SessionLocal
 
@@ -18,14 +18,7 @@ app = FastAPI(
 )
 
 # Include API routers
-app.include_router(system.router)
-app.include_router(auth.router)
-app.include_router(heart_rate.router)
-app.include_router(export.router)
-app.include_router(diet.router)
-app.include_router(goals.router)
-app.include_router(weight.router)
-app.include_router(chat.router)
+app.include_router(v1_router)
 
 
 # Initialize database and create first superuser
@@ -49,7 +42,7 @@ app.add_middleware(
 )
 
 # OAuth2 scheme for authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/signin")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/signin")
 
 # Commented out static files mounting since frontend/dist doesn't exist
 # app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")

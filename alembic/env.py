@@ -7,12 +7,37 @@ from alembic import context
 # Import settings after environment variables are loaded
 from app.core.config import settings
 from app.db.session import Base
+from app.models.auth.user import AuthUser
 
 # Import models to ensure they are registered with Base.metadata
-from app.models.heart_rate import HourlyHeartRate
-from app.models.user import User
+from app.models.enums import DataSource
+from app.models.goal.general import GoalGeneral
+from app.models.goal.macros import GoalMacros
+from app.models.metric.activity.miles import ActivityMiles
+from app.models.metric.activity.steps import ActivitySteps
+from app.models.metric.activity.workouts import ActivityWorkouts
+from app.models.metric.body.composition import BodyComposition
+from app.models.metric.body.heartrate import BodyHeartRate
+from app.models.metric.calories.active import CaloriesActive
+from app.models.metric.calories.baseline import CaloriesBaseline
+from app.models.metric.sleep.daily import SleepDaily
+from app.models.nutrition.macros import NutritionMacros
 
-_ = [User, HourlyHeartRate]
+_ = [
+    AuthUser,
+    DataSource,
+    GoalGeneral,
+    GoalMacros,
+    BodyComposition,
+    BodyHeartRate,
+    ActivitySteps,
+    ActivityMiles,
+    ActivityWorkouts,
+    CaloriesBaseline,
+    CaloriesActive,
+    SleepDaily,
+    NutritionMacros,
+]
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -72,9 +97,9 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = get_url()
+    configuration["sqlalchemy.url"] = get_url()  # type: ignore
     connectable = engine_from_config(
-        configuration,
+        configuration,  # type: ignore
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

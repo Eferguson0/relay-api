@@ -30,7 +30,7 @@ try:
     # Test database connection - only when explicitly called
     def test_connection():
         try:
-            with engine.connect() as connection:
+            with engine.connect():
                 logger.info("Successfully connected to the database")
                 return True
         except Exception as e:
