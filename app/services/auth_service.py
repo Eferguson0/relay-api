@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
+from app.repositories.user_repositories import UserRepository
 
 # Security configuration
 SECRET_KEY = settings.SECRET_KEY
@@ -81,6 +82,20 @@ def create_user(
     db.refresh(db_user)
     return db_user
 
+class AuthService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.repository = UserRepository(db)  # ← Add repository
+
+    def create_user(self, email: str, password: str, full_name: Optional[str] = None) -> AuthUser:
+        hashed_password = get_password_hash(password)
+        user_id = generate_rid("auth", "user")
+        db_user = AuthUser(
+            id=user_id, email=email, hashed_password=hashed_password, full_name=full_name
+        )
+
+        # Delegate to repository
+        return self.repository.create(db_user)  # ← Clean separation!
 
 def verify_token(token: str) -> Optional[str]:
     """Verify JWT token and return the email if valid"""

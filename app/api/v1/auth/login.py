@@ -12,7 +12,7 @@ from app.services.auth_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
-    create_user,
+    AuthService,
     get_current_active_user,
     get_user_by_email,
 )
@@ -58,11 +58,11 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
             )
-        user = create_user(
-            db=db,
+        auth_service = AuthService(db)
+        user = auth_service.create_user(
             email=user_data.email,
             password=user_data.password,
-            full_name=user_data.full_name,
+            full_name=user_data.full_name
         )
         logger.info(f"Successful signup for user: {user.email}")
         return user

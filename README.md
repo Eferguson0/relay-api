@@ -14,7 +14,8 @@ A modern backend API built with FastAPI, PostgreSQL, and OpenAI integration.
 - Database migrations with Alembic
 - UV package manager for faster dependency installation
 - Static file serving for frontend
-- **RID-based resource identification** (Resource IDs with format `type..randomstring`)
+- **RID-based resource identification** (Resource IDs with format
+  `type..randomstring`)
 - **Comprehensive linting** with ruff, black, and isort
 - **Health tracking APIs** for heart rate, diet, weight, and goals
 
@@ -27,12 +28,14 @@ A modern backend API built with FastAPI, PostgreSQL, and OpenAI integration.
 ## Quick Start
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd SupaHealth-Server
 ```
 
 2. Set up the Python environment:
+
 ```bash
 # Create and activate virtual environment
 uv venv
@@ -43,12 +46,14 @@ uv pip install -e .
 ```
 
 3. Create a `.env` file in the project root:
+
 ```bash
 # Create .env file
 touch .env
 ```
 
 Add the following content to your `.env` file (replace the placeholder values):
+
 ```env
 # Database Configuration
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/supahealth
@@ -69,26 +74,31 @@ BACKEND_CORS_ORIGINS=["*"]  # Update with specific origins in production
 ```
 
 4. Start the application:
+
 ```bash
 # Build and start the containers
 docker compose up --build
 ```
 
 5. Access the application:
+
 - Backend API: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
 - Database: localhost:5432
 
 ### IDE Setup
 
-For the best development experience, configure your IDE to use the virtual environment:
+For the best development experience, configure your IDE to use the virtual
+environment:
 
 **VS Code/Cursor:**
+
 - Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
 - Type "Python: Select Interpreter"
 - Choose `.venv/bin/python` from the list
 
 **PyCharm:**
+
 - Go to Settings > Project > Python Interpreter
 - Add Interpreter > Existing Environment
 - Browse to `.venv/bin/python`
@@ -96,6 +106,7 @@ For the best development experience, configure your IDE to use the virtual envir
 ## Development
 
 ### Project Structure
+
 ```
 .
 ├── app/
@@ -190,7 +201,9 @@ For the best development experience, configure your IDE to use the virtual envir
 
 ### Package Management with UV
 
-This project uses UV, a new Python package manager that offers significant performance improvements over pip. UV is automatically installed in the Docker container, but you can also use it locally:
+This project uses UV, a new Python package manager that offers significant
+performance improvements over pip. UV is automatically installed in the Docker
+container, but you can also use it locally:
 
 ```bash
 # Install UV
@@ -251,7 +264,8 @@ docker compose -f docker-compose.prod.yml up --build -d
 
 ### Database Migrations
 
-The application uses Alembic for database migrations. Migrations are automatically run when the application starts.
+The application uses Alembic for database migrations. Migrations are
+automatically run when the application starts.
 
 #### Local Development (Outside Docker)
 
@@ -259,7 +273,7 @@ For local development, you can run Alembic commands directly:
 
 ```bash
 # Set the database URL for local development
-export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/supahealth"
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/relay_sandbox"
 
 # Create a new migration
 uv run alembic revision --autogenerate -m "Description of changes"
@@ -298,13 +312,15 @@ docker compose exec app alembic downgrade -1
 
 #### Handling Deleted Migration Files
 
-If you delete a migration file and the database still references it, you'll get an error like:
+If you delete a migration file and the database still references it, you'll get
+an error like:
+
 ```
 ERROR [alembic.util.messaging] Can't locate revision identified by 'abc123def456'
 ```
 
-
 **Fresh Database (Deletes All Data)**
+
 ```bash
 # Stop and remove everything including volumes
 docker compose down -v
@@ -334,7 +350,9 @@ uv run alembic revision -m "manual_migration"
 
 #### Wiping All Migrations and Starting Fresh
 
-Sometimes during development, you may want to wipe all migrations and start with a clean slate. This is useful when:
+Sometimes during development, you may want to wipe all migrations and start with
+a clean slate. This is useful when:
+
 - You have complex migration conflicts
 - You want to clean up migration history
 - You've made significant model changes and want a single clean migration
@@ -342,12 +360,14 @@ Sometimes during development, you may want to wipe all migrations and start with
 **⚠️ WARNING: This will delete all existing data in your database!**
 
 **Easy Method (Recommended):**
+
 ```bash
 # Use the built-in reset command
 uv run reset-db
 ```
 
 This command will:
+
 1. Drop all existing tables
 2. Remove all migration files
 3. Create a fresh initial migration
@@ -355,6 +375,7 @@ This command will:
 5. Create initial admin and test users
 
 **Manual Method:**
+
 ```bash
 # 1. Remove all existing migration files
 rm -f alembic/versions/*.py
@@ -431,6 +452,7 @@ If you encounter any issues:
    - Ensure all dependencies are installed
 
 4. **Reset Everything**
+
 ```bash
 # Stop all containers and remove volumes
 docker compose down -v
@@ -441,23 +463,28 @@ docker compose up --build
 
 ## Resource Identification (RID) System
 
-The API uses RIDs (Resource IDs) for all resource identification instead of auto-incrementing integers. This provides better scalability and security.
+The API uses RIDs (Resource IDs) for all resource identification instead of
+auto-incrementing integers. This provides better scalability and security.
 
 ### RID Format
+
 - **Format**: `<type>..<random-string>`
-- **Examples**: 
+- **Examples**:
   - User: `user..test123456`
   - Diet: `diet..m8ssli7xr41u`
   - Weight: `weight..kw3cgkg7f08g`
 
 ### Benefits
+
 - **No sequential IDs** - Prevents enumeration attacks
 - **Type identification** - Easy to identify resource type from ID
 - **Distributed-friendly** - No coordination needed for ID generation
 - **URL-safe** - Can be used directly in URLs and APIs
 
 ### RID Generation
+
 RIDs are automatically generated using the `generate_rid()` function:
+
 ```python
 from app.core.rid import generate_rid
 
@@ -469,7 +496,8 @@ goal_id = generate_rid("goal", "weight")            # goal..weight.jkl012mno345
 
 ## Authentication
 
-The API uses JWT (JSON Web Tokens) for authentication with bearer tokens that expire after 1 day.
+The API uses JWT (JSON Web Tokens) for authentication with bearer tokens that
+expire after 1 day.
 
 ### Authentication Endpoints
 
@@ -481,6 +509,7 @@ The API uses JWT (JSON Web Tokens) for authentication with bearer tokens that ex
 ### Using Authentication
 
 1. **Sign up** a new user:
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/auth/signup" \
   -H "Content-Type: application/json" \
@@ -492,6 +521,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/signup" \
 ```
 
 2. **Sign in** to get an access token:
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/auth/signin" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -499,6 +529,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/signin" \
 ```
 
 3. **Use the token** for protected endpoints:
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/auth/me" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -506,13 +537,16 @@ curl -X GET "http://localhost:8000/api/v1/auth/me" \
 
 ### Protected Endpoints
 
-The following endpoints require authentication (Bearer token in Authorization header):
+The following endpoints require authentication (Bearer token in Authorization
+header):
 
 **Authentication:**
+
 - `GET /api/v1/auth/me` - Get user profile
 - `POST /api/v1/auth/refresh` - Refresh token
 
 **Activity Metrics:**
+
 - `GET /api/v1/metric/activity/steps` - Get steps data
 - `POST /api/v1/metric/activity/steps` - Ingest steps data
 - `GET /api/v1/metric/activity/miles` - Get miles data
@@ -521,26 +555,31 @@ The following endpoints require authentication (Bearer token in Authorization he
 - `POST /api/v1/metric/activity/workouts` - Ingest workout data
 
 **Body Metrics:**
+
 - `GET /api/v1/metric/body/heartrate` - Get heart rate data
 - `POST /api/v1/metric/body/heartrate` - Ingest heart rate data
 - `GET /api/v1/metric/body/composition` - Get body composition data
 - `POST /api/v1/metric/body/composition` - Ingest body composition data
 
 **Calorie Metrics:**
+
 - `GET /api/v1/metric/calories/active` - Get active calories data
 - `POST /api/v1/metric/calories/active` - Ingest active calories data
 - `GET /api/v1/metric/calories/baseline` - Get baseline calories data
 - `POST /api/v1/metric/calories/baseline` - Ingest baseline calories data
 
 **Sleep Metrics:**
+
 - `GET /api/v1/metric/sleep/daily` - Get sleep data
 - `POST /api/v1/metric/sleep/daily` - Ingest sleep data
 
 **Nutrition:**
+
 - `GET /api/v1/nutrition/macros` - Get nutrition macro data
 - `POST /api/v1/nutrition/macros` - Ingest nutrition macro data
 
 **Goals:**
+
 - `GET /api/v1/goal/weight` - Get weight goals
 - `POST /api/v1/goal/weight` - Create weight goal
 - `PUT /api/v1/goal/weight/{id}` - Update weight goal
@@ -559,11 +598,13 @@ The following endpoints require authentication (Bearer token in Authorization he
 
 ## Nutrition & Macro Tracking API
 
-The API provides comprehensive endpoints for tracking daily nutrition and macro intake.
+The API provides comprehensive endpoints for tracking daily nutrition and macro
+intake.
 
 ### Nutrition Endpoints
 
 #### Add Single Nutrition Record
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/nutrition/macros/record" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -580,18 +621,21 @@ curl -X POST "http://localhost:8000/api/v1/nutrition/macros/record" \
 ```
 
 #### Get All Nutrition Records
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/nutrition/macros" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Get Records for Specific Day
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/nutrition/macros/daily/2024-01-01" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Get Aggregated Records by Day
+
 ```bash
 # Get all aggregations
 curl -X GET "http://localhost:8000/api/v1/nutrition/macros/aggregate" \
@@ -603,12 +647,14 @@ curl -X GET "http://localhost:8000/api/v1/nutrition/macros/aggregate?start_date=
 ```
 
 #### Delete Nutrition Record
+
 ```bash
 curl -X DELETE "http://localhost:8000/api/v1/nutrition/macros/record/nutrition..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Bulk Ingest Nutrition Data
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/nutrition/macros" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -651,6 +697,7 @@ curl -X POST "http://localhost:8000/api/v1/nutrition/macros" \
 ### Nutrition Data Structure
 
 Each nutrition record contains:
+
 - **id**: RID identifier (format: `nutrition..<random-string>`)
 - **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **datetime**: When the meal was consumed (ISO format)
@@ -658,7 +705,8 @@ Each nutrition record contains:
 - **carbs**: Carbohydrates in grams
 - **fat**: Fat in grams
 - **calories**: Total calories
-- **meal_name**: Name of the meal (e.g., "Breakfast", "Lunch", "Dinner", "Snack")
+- **meal_name**: Name of the meal (e.g., "Breakfast", "Lunch", "Dinner",
+  "Snack")
 - **notes**: Additional notes about the meal
 - **source**: Data source (e.g., "manual", "apple_watch", "fitbit")
 
@@ -672,11 +720,13 @@ Each nutrition record contains:
 
 ## Body Composition Tracking API
 
-The API provides endpoints for tracking body composition measurements including weight, body fat, and muscle mass.
+The API provides endpoints for tracking body composition measurements including
+weight, body fat, and muscle mass.
 
 ### Body Composition Endpoints
 
 #### Add Body Composition Measurement
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/metric/body/composition" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -692,12 +742,14 @@ curl -X POST "http://localhost:8000/api/v1/metric/body/composition" \
 ```
 
 #### Get All Body Composition Records
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/metric/body/composition" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Update Body Composition Record
+
 ```bash
 curl -X PUT "http://localhost:8000/api/v1/metric/body/composition/metric..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -709,6 +761,7 @@ curl -X PUT "http://localhost:8000/api/v1/metric/body/composition/metric..abc123
 ```
 
 #### Delete Body Composition Record
+
 ```bash
 curl -X DELETE "http://localhost:8000/api/v1/metric/body/composition/metric..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -717,6 +770,7 @@ curl -X DELETE "http://localhost:8000/api/v1/metric/body/composition/metric..abc
 ### Body Composition Data Structure
 
 Each body composition record contains:
+
 - **id**: RID identifier (format: `metric..<random-string>`)
 - **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **measurement_date**: Date and time of measurement (ISO format)
@@ -730,11 +784,13 @@ Each body composition record contains:
 
 ## Goals API
 
-The API provides endpoints for managing user goals including weight, macro, and general goals.
+The API provides endpoints for managing user goals including weight, macro, and
+general goals.
 
 ### Goals Endpoints
 
 #### Create Weight Goal
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/goal/weight" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -748,12 +804,14 @@ curl -X POST "http://localhost:8000/api/v1/goal/weight" \
 ```
 
 #### Get Weight Goals
+
 ```bash
 curl -X GET "http://localhost:8000/api/v1/goal/weight" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Update Weight Goal
+
 ```bash
 curl -X PUT "http://localhost:8000/api/v1/goal/weight/goal..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -765,12 +823,14 @@ curl -X PUT "http://localhost:8000/api/v1/goal/weight/goal..abc123def456" \
 ```
 
 #### Delete Weight Goal
+
 ```bash
 curl -X DELETE "http://localhost:8000/api/v1/goal/weight/goal..abc123def456" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 #### Create Macro Goal
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/goal/macros" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -785,6 +845,7 @@ curl -X POST "http://localhost:8000/api/v1/goal/macros" \
 ```
 
 #### Create General Goal
+
 ```bash
 curl -X POST "http://localhost:8000/api/v1/goal/general" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -798,6 +859,7 @@ curl -X POST "http://localhost:8000/api/v1/goal/general" \
 ### Goals Data Structure
 
 **Weight Goals:**
+
 - **id**: RID identifier (format: `goal..<random-string>`)
 - **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **date_hour**: Target date and hour for the goal
@@ -808,6 +870,7 @@ curl -X POST "http://localhost:8000/api/v1/goal/general" \
 - **updated_at**: Timestamp when goal was last updated
 
 **Macro Goals:**
+
 - **id**: RID identifier (format: `goal..<random-string>`)
 - **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **date_hour**: Target date and hour for the goal
@@ -819,6 +882,7 @@ curl -X POST "http://localhost:8000/api/v1/goal/general" \
 - **updated_at**: Timestamp when goal was last updated
 
 **General Goals:**
+
 - **id**: RID identifier (format: `goal..<random-string>`)
 - **user_id**: User RID identifier (format: `auth..user.<random-string>`)
 - **goal_description**: Description of the general goal
@@ -828,4 +892,6 @@ curl -X POST "http://localhost:8000/api/v1/goal/general" \
 
 ## Frontend Integration
 
-The backend serves the frontend static files from the `frontend/dist` directory. Make sure to build your frontend application and place the built files in this location before deploying.
+The backend serves the frontend static files from the `frontend/dist` directory.
+Make sure to build your frontend application and place the built files in this
+location before deploying.
