@@ -1,9 +1,19 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install UV using pip (no apt/curl needed)
-RUN pip install --no-cache-dir uv
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV and update PATH
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    export PATH="/root/.local/bin:${PATH}" && \
+    uv --version
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Copy pyproject.toml and uv.lock first to leverage Docker cache
 COPY pyproject.toml .

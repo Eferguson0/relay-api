@@ -29,16 +29,13 @@ class ActivityWorkouts(Base):
     )  # e.g., "cardio", "strength", "flexibility"
     source = Column(
         Enum(DataSource), nullable=False
-    )  # Source of the data (e.g., "Apple Watch", "Manual")
+    )  # Source of the data (e.g., "apple_watch", "manual")
     duration_minutes = Column(Integer, nullable=True)  # Duration in minutes
     calories_burned = Column(Numeric, nullable=True)  # Calories burned during workout
     distance_miles = Column(Numeric, nullable=True)  # Distance covered in miles
     avg_heart_rate = Column(Integer, nullable=True)  # Average heart rate during workout
     max_heart_rate = Column(Integer, nullable=True)  # Maximum heart rate during workout
     intensity = Column(String, nullable=True)  # low, moderate, high
-    source = Column(
-        Enum(DataSource), nullable=True
-    )  # Source of the data (e.g., "Apple Watch", "Manual")
     notes = Column(String, nullable=True)  # Additional notes about the workout
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+from app.models.enums import DataSource
 
 
 # Activity Workouts Schemas
@@ -29,7 +30,7 @@ class ActivityWorkoutsCreate(BaseModel):
     intensity: Optional[str] = Field(
         None, description="Intensity level: low, moderate, high"
     )
-    source: Optional[str] = Field(None, description="Source of the data")
+    source: Optional[DataSource] = Field(None, description="Source of the data")
     notes: Optional[str] = Field(None, description="Additional notes about the workout")
 
 
@@ -45,7 +46,7 @@ class ActivityWorkoutsResponse(BaseModel):
     avg_heart_rate: Optional[int]
     max_heart_rate: Optional[int]
     intensity: Optional[str]
-    source: Optional[str]
+    source: Optional[DataSource]
     notes: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
