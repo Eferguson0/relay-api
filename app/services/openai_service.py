@@ -42,7 +42,10 @@ async def get_chat_completion(messages: list, model: str = "gpt-3.5-turbo"):
         )
 
         response = await client.chat.completions.create(
-            model=model, messages=messages, temperature=0.7, max_tokens=1000
+            model=model,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1000,
         )
 
         # Log successful API response

@@ -25,7 +25,7 @@ router = APIRouter(prefix="/login", tags=["auth-login"])
     summary="User login endpoint",
     description="Login a user and return an access token",
     responses={
-        200: {"description": "Login successful"},
+        201: {"description": "Login successful"},
         400: {"description": "Invalid input"},
         401: {"description": "Incorrect email or password"},
         422: {"description": "Validation error"},
@@ -132,7 +132,7 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     summary="Refresh access token endpoint",
     description="Refresh the access token for the current user",
     responses={
-        200: {"description": "Token refreshed successfully"},
+        201: {"description": "Token refreshed successfully"},
         400: {"description": "Invalid input"},
         401: {"description": "Unauthorized"},
         422: {"description": "Validation error"},

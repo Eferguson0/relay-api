@@ -38,6 +38,18 @@ services:
       - supahealth_network
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5050:80"  # Different port for pgAdmin web UI
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    networks:
+      - supahealth_network
+
 volumes:
   postgres_data:
     name: supahealth_postgres_data

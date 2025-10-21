@@ -1,10 +1,16 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db
+from app.models.auth.user import AuthUser
+from app.schemas.chat.assistant import ChatRequest, ChatResponse
 from app.services.openai_service import get_chat_completion
+from app.services.chat_service import ChatService
+from app.services.auth_service import get_current_user
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +24,24 @@ SYSTEM_PROMPT = (
 router = APIRouter(prefix="/assistant", tags=["chat-assistant"])
 
 
-class ChatRequest(BaseModel):
-    message: str
+@router.post("/",
+    response_model=ChatResponse,
+    summary="Chat with the AI assistant endpoint",
+    description="Chat with the AI assistant",
+    responses={
+        200: {"description": "Chat successful"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    # current_user: AuthUser = Depends(get_current_user)
+) -> ChatResponse:
 
 
-@router.post("/")
-async def chat(request: ChatRequest):
+    user_id = "123"
+    
     """Handle chat messages"""
     # Log the incoming chat request with timestamp
     timestamp = datetime.now().isoformat()
@@ -34,14 +52,23 @@ async def chat(request: ChatRequest):
         f"[{timestamp}] Chat message content: {request.message[:100]}{'...' if len(request.message) > 100 else ''}"
     )
 
+    chat_service = ChatService(db)
+    # conversation = chat_service.get_or_create_conversation(current_user.id)
+    conversation = chat_service.get_or_create_conversation(user_id)
+
+    chat_service.add_message(
+        conversation_id=conversation.id,
+        content=request.message,
+        role="user",
+        user_id=user_id
+        # user_id=current_user.id
+    )
+
+
     try:
-        messages = [
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
-            {"role": "user", "content": request.message},
-        ]
+        messages = chat_service.get_conversation_context(conversation.id)
+        messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
+
 
         # Log that we're calling OpenAI
         logger.info(f"[{timestamp}] Calling OpenAI API for chat completion")
@@ -50,12 +77,22 @@ async def chat(request: ChatRequest):
 
         # Log successful response
         if response is not None:
+            chat_service.add_message(
+                conversation_id=conversation.id,
+                content=response,
+                role="assistant",
+                user_id=user_id
+                # user_id=current_user.id
+            )            
+            
             logger.info(
                 f"[{timestamp}] Chat response generated successfully - Length: {len(response)} characters"
             )
             logger.debug(
                 f"[{timestamp}] Chat response content: {response[:100]}{'...' if len(response) > 100 else ''}"
             )
+
+
 
         return {"response": response}
     except Exception as e:
