@@ -14,22 +14,33 @@ from app.schemas.goal.general import (
     GoalGeneralResponse,
 )
 from app.services.auth_service import get_current_active_user
+from app.services.goal_service import GoalService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/general", tags=["goal-general"])
 
 
-@router.get("/", response_model=GoalGeneralResponse)
+@router.get("/",
+    response_model=GoalGeneralResponse,
+    summary="Get current user's general goal endpoint",
+    description="Get the current user's general goal",
+    responses={
+        200: {"description": "General goal retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "No general goal found for user"},
+        500: {"description": "Internal server error"},
+    }
+)
 async def get_general_goal(
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Get current user's general goal"""
     try:
-        goal = (
-            db.query(GoalGeneral).filter(GoalGeneral.user_id == current_user.id).first()
-        )
+        goal_service = GoalService(db)
+        goal = goal_service.get_general_goal(current_user.id)
 
         if not goal:
             raise HTTPException(
@@ -50,7 +61,18 @@ async def get_general_goal(
         )
 
 
-@router.post("/bulk", response_model=GoalGeneralBulkCreateResponse)
+@router.post("/bulk",
+    response_model=GoalGeneralBulkCreateResponse,
+    summary="Create or update multiple general goals endpoint",
+    description="Create or update multiple general goals",
+    responses={
+        200: {"description": "General goals created or updated successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "No general goal found for user"},
+        500: {"description": "Internal server error"},
+    }
+)
 async def create_or_update_multiple_general_goals(
     bulk_data: GoalGeneralBulkCreate,
     db: Session = Depends(get_db),
@@ -58,72 +80,11 @@ async def create_or_update_multiple_general_goals(
 ):
     """Create or update multiple general goals (bulk upsert)"""
     try:
-        created_count = 0
-        updated_count = 0
-        processed_records = []
-
-        for goal_data in bulk_data.records:
-            # Check if user already has a general goal
-            existing_goal = (
-                db.query(GoalGeneral)
-                .filter(GoalGeneral.user_id == current_user.id)
-                .one_or_none()
-            )
-
-            if existing_goal:
-                # Update existing goal
-                if goal_data.goal_description is not None:
-                    setattr(
-                        existing_goal, "goal_description", goal_data.goal_description
-                    )
-                if goal_data.target_date is not None:
-                    setattr(existing_goal, "target_date", goal_data.target_date)
-                if goal_data.target_weight is not None:
-                    setattr(existing_goal, "target_weight", goal_data.target_weight)
-                if goal_data.target_body_fat_percentage is not None:
-                    setattr(
-                        existing_goal,
-                        "target_body_fat_percentage",
-                        goal_data.target_body_fat_percentage,
-                    )
-                if goal_data.target_muscle_mass_percentage is not None:
-                    setattr(
-                        existing_goal,
-                        "target_muscle_mass_percentage",
-                        goal_data.target_muscle_mass_percentage,
-                    )
-                processed_records.append(existing_goal)
-                updated_count += 1
-            else:
-                # Create new general goal record
-                new_goal = GoalGeneral(
-                    id=generate_rid("goal", "general"),
-                    user_id=current_user.id,
-                    goal_description=goal_data.goal_description,
-                    target_date=goal_data.target_date,
-                    target_weight=goal_data.target_weight,
-                    target_body_fat_percentage=goal_data.target_body_fat_percentage,
-                    target_muscle_mass_percentage=goal_data.target_muscle_mass_percentage,
-                )
-                db.add(new_goal)
-                processed_records.append(new_goal)
-                created_count += 1
-
-        # Commit all changes at once
-        db.commit()
-
-        logger.info(
-            f"Bulk processed {len(bulk_data.records)} general goals for {current_user.id}: "
-            f"{created_count} created, {updated_count} updated"
-        )
-
-        return GoalGeneralBulkCreateResponse(
-            message=f"Bulk operation completed: {created_count} created, {updated_count} updated",
-            created_count=created_count,
-            updated_count=updated_count,
-            total_processed=len(bulk_data.records),
-            records=processed_records,
-        )
+        
+        goal_service = GoalService(db)
+        result = goal_service.create_or_update_multiple_general_goals(bulk_data, current_user.id)
+        return result
+        
 
     except Exception as e:
         logger.error(f"Error in bulk upsert of general goals: {str(e)}")
@@ -134,31 +95,29 @@ async def create_or_update_multiple_general_goals(
         )
 
 
-@router.delete("/", response_model=GoalGeneralDeleteResponse)
+@router.delete("/",
+    response_model=GoalGeneralDeleteResponse,
+    summary="Delete current user's general goal endpoint",
+    description="Delete the current user's general goal",
+    responses={
+        200: {"description": "General goal deleted successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "No general goal found for user"},
+        500: {"description": "Internal server error"},
+    }
+)
 async def delete_general_goal(
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ):
     """Delete current user's general goal"""
+
     try:
-        # Find and delete the goal
-        goal = (
-            db.query(GoalGeneral).filter(GoalGeneral.user_id == current_user.id).first()
-        )
+        goal_service = GoalService(db)
+        result = goal_service.delete_general_goal(current_user.id)
+        return result
 
-        if not goal:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No general goal found to delete",
-            )
-
-        db.delete(goal)
-        db.commit()
-
-        logger.info(f"Deleted general goal for {current_user.id}")
-        return GoalGeneralDeleteResponse(
-            message="General goal deleted successfully", deleted_count=1
-        )
 
     except HTTPException:
         raise
