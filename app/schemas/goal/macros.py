@@ -55,7 +55,7 @@ class GoalMacrosDeleteResponse(BaseModel):
     message: str
     deleted_count: int
 
-
+"""
 # Bulk Operations Schemas
 class GoalMacrosBulkCreate(BaseModel):
     records: List[GoalMacrosCreate] = Field(
@@ -69,3 +69,4 @@ class GoalMacrosBulkCreateResponse(BaseModel):
     updated_count: int
     total_processed: int
     records: List[GoalMacrosResponse]
+"""

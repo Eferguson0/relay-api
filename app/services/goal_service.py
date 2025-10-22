@@ -1,18 +1,31 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from app.core.rid import generate_rid
 from app.models.goal.general import GoalGeneral
+from app.models.goal.macros import GoalMacros
 from app.repositories.goal_repositories import GoalRepository
-from app.schemas.goal.general import GoalGeneralBulkCreate, GoalGeneralBulkCreateResponse, GoalGeneralDeleteResponse
+from app.schemas.goal.general import (
+    GoalGeneralBulkCreate,
+    GoalGeneralBulkCreateResponse,
+    GoalGeneralDeleteResponse,
+)
+from app.schemas.goal.macros import (
+    GoalMacrosCreate,
+    GoalMacrosCreateResponse,
+    GoalMacrosDeleteResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 class GoalService:
     def __init__(self, db: Session):
         self.db = db
+
+# General Goal Services
 
     def get_general_goal(self, user_id: str) -> GoalGeneral:
         goal_repository = GoalRepository(self.db)
@@ -92,5 +105,67 @@ class GoalService:
         logger.info(f"Deleted general goal for {user_id}")
         return GoalGeneralDeleteResponse(
             message="General goal deleted successfully",
+            deleted_count=1
+        )
+
+# Macro Goal Services
+
+    def get_macro_goal(self, user_id: str) -> GoalMacros:
+        goal_repository = GoalRepository(self.db)   
+        goal = goal_repository.get_macro_goal(user_id)
+
+        if not goal:
+            return None
+
+        logger.info(f"Retrieved macro goal for {user_id}")
+        return goal
+
+
+    def create_or_update_macro_goal(self, goal_data: GoalMacrosCreate, user_id: str) -> GoalMacrosCreateResponse:
+        goal_repository = GoalRepository(self.db)
+        existing_goal = goal_repository.get_macro_goal(user_id)
+
+        if existing_goal:
+            if goal_data.calories is not None:
+                setattr(existing_goal, "calories", goal_data.calories)
+            if goal_data.protein is not None:
+                setattr(existing_goal, "protein", goal_data.protein)
+            if goal_data.carbs is not None:
+                setattr(existing_goal, "carbs", goal_data.carbs)
+            if goal_data.fat is not None:
+                setattr(existing_goal, "fat", goal_data.fat)
+            if goal_data.calorie_deficit is not None:
+                setattr(existing_goal, "calorie_deficit", goal_data.calorie_deficit)
+            setattr(existing_goal, "updated_at", datetime.utcnow())
+            existing_goal = goal_repository.update_macro_goal(existing_goal)
+            return GoalMacrosCreateResponse(
+                message="Macro goal updated successfully",
+                goal=existing_goal
+            )
+        else:
+            new_goal = goal_repository.create_macro_goal(GoalMacros(
+                id=generate_rid("goal", "macros"),
+                user_id=user_id,
+                calories=goal_data.calories,
+                protein=goal_data.protein,
+                carbs=goal_data.carbs,
+                fat=goal_data.fat,
+                calorie_deficit=goal_data.calorie_deficit,
+            ))
+            return GoalMacrosCreateResponse(
+                message="Macro goal created successfully",
+                goal=new_goal
+            )
+
+
+    def delete_macro_goal(self, user_id: str) -> GoalMacrosDeleteResponse:
+        goal_repository = GoalRepository(self.db)
+        goal = goal_repository.delete_macro_goal(user_id)
+
+        if not goal:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No macro goal found to delete")
+        logger.info(f"Deleted macro goal for {user_id}")
+        return GoalMacrosDeleteResponse(
+            message="Macro goal deleted successfully",
             deleted_count=1
         )

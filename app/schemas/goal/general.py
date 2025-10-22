@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 
 
 # Goal General Schemas
+
+
 class GoalGeneralCreate(BaseModel):
     goal_description: str = Field(
         ..., min_length=1, description="Description of the general goal"
@@ -23,7 +25,7 @@ class GoalGeneralCreate(BaseModel):
         None, ge=0, le=100, description="Target muscle mass percentage (0-100)"
     )
 
-
+"""
 class GoalGeneralUpdate(BaseModel):
     goal_description: Optional[str] = Field(
         None, min_length=1, description="Description of the general goal"
@@ -41,7 +43,7 @@ class GoalGeneralUpdate(BaseModel):
     target_muscle_mass_percentage: Optional[float] = Field(
         None, ge=0, le=100, description="Target muscle mass percentage (0-100)"
     )
-
+"""
 
 class GoalGeneralResponse(BaseModel):
     id: str
@@ -58,7 +60,7 @@ class GoalGeneralResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
+"""
 # Response schemas
 class GoalGeneralCreateResponse(BaseModel):
     message: str
@@ -69,6 +71,7 @@ class GoalGeneralUpdateResponse(BaseModel):
     message: str
     goal: GoalGeneralResponse
 
+"""
 
 class GoalGeneralDeleteResponse(BaseModel):
     message: str

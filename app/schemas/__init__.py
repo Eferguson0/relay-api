@@ -16,11 +16,11 @@ from .auth.user import (
 # Goal schemas
 from .goal.general import (
     GoalGeneralCreate,
-    GoalGeneralCreateResponse,
+    # GoalGeneralCreateResponse,
     GoalGeneralDeleteResponse,
     GoalGeneralResponse,
-    GoalGeneralUpdate,
-    GoalGeneralUpdateResponse,
+    # GoalGeneralUpdate,
+    # GoalGeneralUpdateResponse,
 )
 from .goal.macros import (
     GoalMacrosCreate,
