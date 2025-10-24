@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.metric.activity.miles import ActivityMiles
 from app.models.metric.activity.steps import ActivitySteps
+from app.models.metric.activity.workouts import ActivityWorkouts
 from app.models.metric.body.composition import BodyComposition
 from app.models.metric.body.heartrate import BodyHeartRate
 from app.models.metric.calories.active import CaloriesActive
@@ -14,6 +15,7 @@ from app.models.metric.sleep.daily import SleepDaily
 from app.repositories.metrics_repositories import MetricsRepository
 from app.schemas.metric.activity.miles import ActivityMilesBulkCreate
 from app.schemas.metric.activity.steps import ActivityStepsBulkCreate
+from app.schemas.metric.activity.workouts import ActivityWorkoutsBulkCreate
 from app.core.rid import generate_rid
 
 
@@ -130,3 +132,92 @@ class MetricsService:
         """Delete an activity steps record"""
         metrics_repository = MetricsRepository(self.db)
         return metrics_repository.delete_steps_record(user_id, record_id)
+
+# Workouts Services
+
+    def get_workouts_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[ActivityWorkouts]:
+        """Get activity workouts data with optional date filtering"""
+        metrics_repository = MetricsRepository(self.db)
+        return metrics_repository.get_workouts_data(user_id, start_date, end_date)
+
+    def get_workouts_data_by_id(self, user_id: str, record_id: str) -> Optional[ActivityWorkouts]:
+        """Get a specific activity workout record by ID"""
+        metrics_repository = MetricsRepository(self.db)
+        return metrics_repository.get_workouts_data_by_id(user_id, record_id)
+
+    def create_or_update_multiple_workouts_records(self, bulk_data: ActivityWorkoutsBulkCreate, user_id: str) -> tuple:
+        """Create or update multiple activity workouts records (bulk upsert)"""
+        
+        created_count = 0
+        updated_count = 0
+        processed_records = []
+
+        metrics_repository = MetricsRepository(self.db)
+
+        for workout_data in bulk_data.records:
+            # Check if record already exists for this date and source
+            existing_record = metrics_repository.get_workouts_data_by_date_source(user_id, workout_data.date, workout_data.source)
+
+            if existing_record:
+                # Update existing record
+                if workout_data.workout_name is not None:
+                    setattr(existing_record, "workout_name", workout_data.workout_name)
+                if workout_data.workout_type is not None:
+                    setattr(existing_record, "workout_type", workout_data.workout_type)
+                if workout_data.duration_minutes is not None:
+                    setattr(
+                        existing_record,
+                        "duration_minutes",
+                        workout_data.duration_minutes,
+                    )
+                if workout_data.calories_burned is not None:
+                    setattr(
+                        existing_record, "calories_burned", workout_data.calories_burned
+                    )
+                if workout_data.distance_miles is not None:
+                    setattr(
+                        existing_record, "distance_miles", workout_data.distance_miles
+                    )
+                if workout_data.avg_heart_rate is not None:
+                    setattr(
+                        existing_record, "avg_heart_rate", workout_data.avg_heart_rate
+                    )
+                if workout_data.max_heart_rate is not None:
+                    setattr(
+                        existing_record, "max_heart_rate", workout_data.max_heart_rate
+                    )
+                if workout_data.intensity is not None:
+                    setattr(existing_record, "intensity", workout_data.intensity)
+                if workout_data.notes is not None:
+                    setattr(existing_record, "notes", workout_data.notes)
+                setattr(existing_record, "updated_at", datetime.utcnow())
+                updated_record = metrics_repository.update_workouts_record(existing_record)
+                processed_records.append(updated_record)
+                updated_count += 1
+            else:
+                # Create new workout record
+                new_record = ActivityWorkouts(
+                    id=generate_rid("metric", "activity_workouts"),
+                    user_id=user_id,
+                    date=workout_data.date,
+                    workout_name=workout_data.workout_name,
+                    workout_type=workout_data.workout_type,
+                    duration_minutes=workout_data.duration_minutes,
+                    calories_burned=workout_data.calories_burned,
+                    distance_miles=workout_data.distance_miles,
+                    avg_heart_rate=workout_data.avg_heart_rate,
+                    max_heart_rate=workout_data.max_heart_rate,
+                    intensity=workout_data.intensity,
+                    source=workout_data.source,
+                    notes=workout_data.notes,
+                )
+                new_record = metrics_repository.create_new_workouts_record(new_record)
+                processed_records.append(new_record)
+                created_count += 1
+        
+        return processed_records, created_count, updated_count
+
+    def delete_workouts_record(self, user_id: str, record_id: str) -> Optional[ActivityWorkouts]:
+        """Delete an activity workouts record"""
+        metrics_repository = MetricsRepository(self.db)
+        return metrics_repository.delete_workouts_record(user_id, record_id)

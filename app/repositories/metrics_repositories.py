@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional, List
 from app.models.metric.activity.miles import ActivityMiles
 from app.models.metric.activity.steps import ActivitySteps
+from app.models.metric.activity.workouts import ActivityWorkouts
 
 class MetricsRepository:
     def __init__(self, db: Session):
@@ -74,6 +75,43 @@ class MetricsRepository:
 
     def delete_steps_record(self, user_id: str, record_id: str) -> Optional[ActivitySteps]:
         record = self.db.query(ActivitySteps).filter(ActivitySteps.id == record_id, ActivitySteps.user_id == user_id).first()
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
+
+
+# Workouts Repository
+
+    def get_workouts_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[ActivityWorkouts]:
+        query = self.db.query(ActivityWorkouts).filter(ActivityWorkouts.user_id == user_id)
+        if start_date:
+            query = query.filter(ActivityWorkouts.date >= start_date)
+        if end_date:
+            query = query.filter(ActivityWorkouts.date <= end_date)
+        records = query.order_by(ActivityWorkouts.date.desc()).all()
+        return records
+
+    def get_workouts_data_by_id(self, user_id: str, record_id: str) -> Optional[ActivityWorkouts]:
+        return self.db.query(ActivityWorkouts).filter(ActivityWorkouts.id == record_id, ActivityWorkouts.user_id == user_id).first()
+
+    def get_workouts_data_by_date_source(self, user_id: str, date: datetime, source: str) -> Optional[ActivityWorkouts]:
+        return self.db.query(ActivityWorkouts).filter(ActivityWorkouts.user_id == user_id, ActivityWorkouts.date == date, ActivityWorkouts.source == source).first()
+
+    def update_workouts_record(self, record: ActivityWorkouts) -> ActivityWorkouts:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def create_new_workouts_record(self, record: ActivityWorkouts) -> ActivityWorkouts:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def delete_workouts_record(self, user_id: str, record_id: str) -> Optional[ActivityWorkouts]:
+        record = self.db.query(ActivityWorkouts).filter(ActivityWorkouts.id == record_id, ActivityWorkouts.user_id == user_id).first()
         if record:
             self.db.delete(record)
             self.db.commit()

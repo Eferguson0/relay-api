@@ -22,7 +22,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/workouts", tags=["metric-workouts"])
 
 
-@router.get("/", response_model=list[ActivityWorkoutsResponse])
+@router.get("/",
+    response_model=list[ActivityWorkoutsResponse],
+    summary="Get activity workouts data endpoint",
+    description="Get activity workouts data",
+    responses={
+        200: {"description": "Activity workouts data retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Activity workouts data not found"},
+    },
+)
 async def get_activity_workouts(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -31,22 +41,20 @@ async def get_activity_workouts(
 ):
     """Get activity workouts data"""
     try:
-        query = db.query(ActivityWorkouts).filter(
-            ActivityWorkouts.user_id == current_user.id
-        )
+        
+        metrics_service = MetricsService(db)
+        workouts_data = metrics_service.get_workouts_data(current_user.id, start_date, end_date)
 
-        # Apply date filters if provided
-        if start_date:
-            query = query.filter(ActivityWorkouts.workout_date >= start_date)
-        if end_date:
-            query = query.filter(ActivityWorkouts.workout_date <= end_date)
-
-        records = query.order_by(ActivityWorkouts.workout_date.desc()).all()
+        if not workouts_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Activity workouts data not found",
+            )
 
         logger.info(
-            f"Retrieved {len(records)} activity workouts records for {current_user.id}"
+            f"Retrieved {len(workouts_data)} activity workouts records for {current_user.id}"
         )
-        return records
+        return workouts_data
 
     except Exception as e:
         logger.error(f"Error retrieving activity workouts: {str(e)}")
@@ -56,7 +64,18 @@ async def get_activity_workouts(
         )
 
 
-@router.get("/{record_id}", response_model=ActivityWorkoutsResponse)
+@router.get("/{record_id}",
+    response_model=ActivityWorkoutsResponse,
+    summary="Get a specific activity workout record by ID endpoint",
+    description="Get a specific activity workout record by ID",
+    responses={
+        200: {"description": "Activity workout record retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Activity workout record not found"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def get_activity_workout_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -64,14 +83,9 @@ async def get_activity_workout_record(
 ):
     """Get a specific activity workout record by ID"""
     try:
-        record = (
-            db.query(ActivityWorkouts)
-            .filter(
-                ActivityWorkouts.id == record_id,
-                ActivityWorkouts.user_id == current_user.id,
-            )
-            .first()
-        )
+        
+        metrics_service = MetricsService(db)
+        record = metrics_service.get_workouts_data_by_id(current_user.id, record_id)
 
         if not record:
             raise HTTPException(
@@ -94,7 +108,18 @@ async def get_activity_workout_record(
         )
 
 
-@router.post("/bulk", response_model=ActivityWorkoutsBulkCreateResponse)
+@router.post("/bulk",
+    response_model=ActivityWorkoutsBulkCreateResponse,
+    summary="Create or update multiple workout records (bulk upsert) endpoint",
+    description="Create or update multiple workout records (bulk upsert)",
+    responses={
+        200: {"description": "Workout records created or updated successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Activity workout record not found"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def create_or_update_multiple_workout_records(
     bulk_data: ActivityWorkoutsBulkCreate,
     db: Session = Depends(get_db),
@@ -102,80 +127,15 @@ async def create_or_update_multiple_workout_records(
 ):
     """Create or update multiple workout records (bulk upsert)"""
     try:
-        created_count = 0
-        updated_count = 0
-        processed_records = []
+        
+        metrics_service = MetricsService(db)
+        processed_records, created_count, updated_count = metrics_service.create_or_update_multiple_workouts_records(bulk_data, current_user.id)
 
-        for workout_data in bulk_data.records:
-            # Check if record already exists for this date and source
-            existing_record = (
-                db.query(ActivityWorkouts)
-                .filter(
-                    ActivityWorkouts.user_id == current_user.id,
-                    ActivityWorkouts.date == workout_data.date,
-                    ActivityWorkouts.source == workout_data.source,
-                )
-                .one_or_none()
+        if not processed_records:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Activity workout record not found",
             )
-
-            if existing_record:
-                # Update existing record
-                if workout_data.workout_name is not None:
-                    setattr(existing_record, "workout_name", workout_data.workout_name)
-                if workout_data.workout_type is not None:
-                    setattr(existing_record, "workout_type", workout_data.workout_type)
-                if workout_data.duration_minutes is not None:
-                    setattr(
-                        existing_record,
-                        "duration_minutes",
-                        workout_data.duration_minutes,
-                    )
-                if workout_data.calories_burned is not None:
-                    setattr(
-                        existing_record, "calories_burned", workout_data.calories_burned
-                    )
-                if workout_data.distance_miles is not None:
-                    setattr(
-                        existing_record, "distance_miles", workout_data.distance_miles
-                    )
-                if workout_data.avg_heart_rate is not None:
-                    setattr(
-                        existing_record, "avg_heart_rate", workout_data.avg_heart_rate
-                    )
-                if workout_data.max_heart_rate is not None:
-                    setattr(
-                        existing_record, "max_heart_rate", workout_data.max_heart_rate
-                    )
-                if workout_data.intensity is not None:
-                    setattr(existing_record, "intensity", workout_data.intensity)
-                if workout_data.notes is not None:
-                    setattr(existing_record, "notes", workout_data.notes)
-                setattr(existing_record, "updated_at", datetime.utcnow())
-                processed_records.append(existing_record)
-                updated_count += 1
-            else:
-                # Create new workout record
-                new_record = ActivityWorkouts(
-                    id=generate_rid("metric", "activity_workouts"),
-                    user_id=current_user.id,
-                    date=workout_data.date,
-                    workout_name=workout_data.workout_name,
-                    workout_type=workout_data.workout_type,
-                    duration_minutes=workout_data.duration_minutes,
-                    calories_burned=workout_data.calories_burned,
-                    distance_miles=workout_data.distance_miles,
-                    avg_heart_rate=workout_data.avg_heart_rate,
-                    max_heart_rate=workout_data.max_heart_rate,
-                    intensity=workout_data.intensity,
-                    source=workout_data.source,
-                    notes=workout_data.notes,
-                )
-                db.add(new_record)
-                processed_records.append(new_record)
-                created_count += 1
-
-        # Commit all changes at once
-        db.commit()
 
         logger.info(
             f"Bulk processed {len(bulk_data.records)} workout records for {current_user.id}: "
@@ -199,7 +159,18 @@ async def create_or_update_multiple_workout_records(
         )
 
 
-@router.delete("/{record_id}", response_model=ActivityWorkoutsDeleteResponse)
+@router.delete("/{record_id}",
+    response_model=ActivityWorkoutsDeleteResponse,
+    summary="Delete a workout record by ID endpoint",
+    description="Delete a workout record by ID",
+    responses={
+        200: {"description": "Workout record deleted successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Workout record not found to delete"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def delete_activity_workout_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -207,24 +178,15 @@ async def delete_activity_workout_record(
 ):
     """Delete an activity workout record"""
     try:
-        # Find and delete the record
-        record = (
-            db.query(ActivityWorkouts)
-            .filter(
-                ActivityWorkouts.id == record_id,
-                ActivityWorkouts.user_id == current_user.id,
-            )
-            .first()
-        )
+        
+        metrics_service = MetricsService(db)
+        record = metrics_service.delete_workouts_record(current_user.id, record_id)
 
         if not record:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Activity workout record not found to delete",
             )
-
-        db.delete(record)
-        db.commit()
 
         logger.info(
             f"Deleted activity workout record {record_id} for {current_user.id}"
