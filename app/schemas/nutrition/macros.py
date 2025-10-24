@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
+"""
 # Macros Ingest Request Schemas
 class MacroDataPoint(BaseModel):
     protein: Optional[float] = Field(None, ge=0, description="Protein in grams")
@@ -34,7 +34,7 @@ class NutritionMacrosIngestResponse(BaseModel):
     total_protein: Optional[float] = None
     total_carbs: Optional[float] = None
     total_fat: Optional[float] = None
-
+"""
 
 # Macros Export Response Schema
 class NutritionMacrosRecord(BaseModel):
@@ -75,7 +75,7 @@ class NutritionMacrosRecordCreate(BaseModel):
     meal_name: Optional[str] = Field(None, description="Name of the meal")
     notes: Optional[str] = Field(None, description="Additional notes about the meal")
 
-
+"""
 class NutritionMacrosRecordResponse(BaseModel):
     id: str
     user_id: str
@@ -91,6 +91,21 @@ class NutritionMacrosRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+"""
+
+# Bulk Operations Schemas
+class NutritionMacrosBulkCreate(BaseModel):
+    records: List[NutritionMacrosRecordCreate] = Field(
+        ..., description="List of nutrition macro records to create/update"
+    )
+
+
+class NutritionMacrosBulkCreateResponse(BaseModel):
+    message: str
+    created_count: int
+    updated_count: int
+    total_processed: int
+    records: List[NutritionMacrosRecord]
 
 
 # Daily Aggregation Schema
@@ -114,18 +129,3 @@ class DailyAggregationResponse(BaseModel):
 class NutritionMacrosDeleteResponse(BaseModel):
     message: str
     deleted_count: int
-
-
-# Bulk Operations Schemas
-class NutritionMacrosBulkCreate(BaseModel):
-    records: List[NutritionMacrosRecordCreate] = Field(
-        ..., description="List of nutrition macro records to create/update"
-    )
-
-
-class NutritionMacrosBulkCreateResponse(BaseModel):
-    message: str
-    created_count: int
-    updated_count: int
-    total_processed: int
-    records: List[NutritionMacrosRecordResponse]

@@ -99,14 +99,16 @@ from .metric.sleep.daily import (
 from .nutrition.macros import (
     DailyAggregation,
     DailyAggregationResponse,
-    MacroDataPoint,
+    # MacroDataPoint,
+    # NutritionMacrosIngestRequest,
+    # NutritionMacrosIngestResponse,
+    NutritionMacrosBulkCreate,
+    NutritionMacrosBulkCreateResponse,
     NutritionMacrosDeleteResponse,
     NutritionMacrosExportResponse,
-    NutritionMacrosIngestRequest,
-    NutritionMacrosIngestResponse,
     NutritionMacrosRecord,
     NutritionMacrosRecordCreate,
-    NutritionMacrosRecordResponse,
+    # NutritionMacrosRecordResponse,
 )
 
 __all__ = [
