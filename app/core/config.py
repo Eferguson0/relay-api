@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/relay_sandbox"
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/supahealth_sandbox"
     )
 
     # OpenAI

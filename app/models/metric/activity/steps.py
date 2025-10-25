@@ -17,7 +17,7 @@ from app.models.enums import DataSource
 class ActivitySteps(Base):
     __tablename__ = "activity_steps"
 
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
     date_hour = Column(
         DateTime(timezone=True), nullable=False

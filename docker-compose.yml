@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: relay_sandbox
+      POSTGRES_DB: supahealth_sandbox
     ports:
       - "5432:5432"
     volumes:
@@ -24,7 +24,7 @@ services:
     container_name: supahealth_app
     command: /bin/bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/relay_sandbox
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/supahealth_sandbox
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SECRET_KEY=${SECRET_KEY}
     ports:

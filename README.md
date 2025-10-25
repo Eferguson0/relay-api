@@ -273,7 +273,7 @@ For local development, you can run Alembic commands directly:
 
 ```bash
 # Set the database URL for local development
-export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/relay_sandbox"
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/supahealth_sandbox"
 
 # Create a new migration
 uv run alembic revision --autogenerate -m "Description of changes"
