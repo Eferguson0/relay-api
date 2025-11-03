@@ -15,6 +15,7 @@ from app.schemas.nutrition.macros import (
     NutritionMacrosDeleteResponse,
     NutritionMacrosRecord,
     NutritionMacrosExportResponse,
+    NutritionMacrosRecordCreate,
 )
 from app.services.auth_service import get_current_active_user
 from app.services.nutrition_service import NutritionService
@@ -38,7 +39,7 @@ router = APIRouter(prefix="/macros", tags=["nutrition-macros"])
 async def get_macros_data(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    meal_name: Optional[str] = None,
+    food_name: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ):
@@ -46,7 +47,7 @@ async def get_macros_data(
     try:
 
         nutrition_service = NutritionService(db)
-        data = nutrition_service.get_macros_export_data(current_user.id, start_date, end_date, meal_name)
+        data = nutrition_service.get_macros_export_data(current_user.id, start_date, end_date, food_name)
 
 
         if not data.records:
@@ -70,6 +71,36 @@ async def get_macros_data(
             detail=f"Error fetching data: {str(e)}",
         )
 
+@router.post("/",
+    response_model=NutritionMacrosRecord,
+    summary="Create a macro record",
+    description="Create a macro record",
+    responses={
+        200: {"description": "Macro record created successfully"},
+        201: {"description": "Macro record created successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def create_macro_record(
+    record_data: NutritionMacrosRecordCreate,
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Create a macro record"""
+    try:
+        nutrition_service = NutritionService(db)
+        record = nutrition_service.create_macro_record(record_data, current_user.id)
+        return NutritionMacrosRecord.model_validate(record)
+
+    except Exception as e:
+        logger.error(f"Error in creating macro record: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error in creating macro record: {str(e)}",
+        )
 
 @router.post("/bulk",
     response_model=NutritionMacrosBulkCreateResponse,
@@ -297,7 +328,7 @@ async def get_macro_aggregations(
         # Create aggregations
         aggregations = []
         for date_str, day_records in daily_groups.items():
-            total_calories = sum(record.calories for record in day_records if record.calories)
+            total_calories = sum(record.calories for record in day_records)
             total_protein = sum(record.protein for record in day_records if record.protein)
             total_carbs = sum(record.carbs for record in day_records if record.carbs)
             total_fat = sum(record.fat for record in day_records if record.fat)
@@ -305,7 +336,7 @@ async def get_macro_aggregations(
             aggregations.append(
                 DailyAggregation(
                     date=date_str,
-                    total_calories=total_calories if total_calories > 0 else None,
+                    total_calories=total_calories,
                     total_protein=total_protein if total_protein > 0 else None,
                     total_carbs=total_carbs if total_carbs > 0 else None,
                     total_fat=total_fat if total_fat > 0 else None,

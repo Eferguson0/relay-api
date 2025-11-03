@@ -3,7 +3,6 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
-from app.db.session import Base, engine
 from app.models.auth.user import AuthUser
 from app.services.auth_service import get_password_hash
 
@@ -13,15 +12,13 @@ logger = logging.getLogger(__name__)
 
 def init_db() -> None:
     """
-    Initialize the database by creating all tables.
+    Initialize the database.
+    Note: Tables are managed via Alembic migrations, not create_all().
+    Run 'alembic upgrade head' to apply migrations.
     """
-    try:
-        # Create all tables
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Error creating database tables: {str(e)}")
-        raise
+    # Alembic handles all schema changes via migrations
+    # Do NOT use Base.metadata.create_all() as it conflicts with migrations
+    logger.info("Database initialization complete (using Alembic for schema management)")
 
 
 def create_first_superuser(db: Session) -> None:

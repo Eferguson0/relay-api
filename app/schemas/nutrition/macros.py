@@ -41,11 +41,12 @@ class NutritionMacrosRecord(BaseModel):
     id: str
     user_id: str
     datetime: datetime
+    food_name: str
+    calories: float
     protein: Optional[float]
     carbs: Optional[float]
     fat: Optional[float]
-    calories: Optional[float]
-    meal_name: Optional[str]
+    is_saved: bool
     notes: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
@@ -57,7 +58,7 @@ class NutritionMacrosRecord(BaseModel):
 class NutritionMacrosExportResponse(BaseModel):
     records: List[NutritionMacrosRecord]
     total_count: int
-    total_calories: Optional[float] = None
+    total_calories: float
     total_protein: Optional[float] = None
     total_carbs: Optional[float] = None
     total_fat: Optional[float] = None
@@ -68,11 +69,12 @@ class NutritionMacrosRecordCreate(BaseModel):
     datetime: str = Field(
         ..., description="ISO datetime string of when the meal was consumed"
     )
+    food_name: str = Field(..., description="Name of the food")
+    calories: float = Field(..., ge=0, description="Calories in kcal")
     protein: Optional[float] = Field(None, ge=0, description="Protein in grams")
     carbs: Optional[float] = Field(None, ge=0, description="Carbs in grams")
     fat: Optional[float] = Field(None, ge=0, description="Fat in grams")
-    calories: Optional[float] = Field(None, ge=0, description="Calories in kcal")
-    meal_name: Optional[str] = Field(None, description="Name of the meal")
+    is_saved: bool = Field(default=False, description="Whether the food is saved")
     notes: Optional[str] = Field(None, description="Additional notes about the meal")
 
 """
@@ -111,7 +113,7 @@ class NutritionMacrosBulkCreateResponse(BaseModel):
 # Daily Aggregation Schema
 class DailyAggregation(BaseModel):
     date: str = Field(..., description="Date in YYYY-MM-DD format")
-    total_calories: Optional[float] = None
+    total_calories: float
     total_protein: Optional[float] = None
     total_carbs: Optional[float] = None
     total_fat: Optional[float] = None

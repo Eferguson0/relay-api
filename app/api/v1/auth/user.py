@@ -71,4 +71,4 @@ async def delete_user_account(
     logger.info(f"User account deletion requested for: {current_user.email}")
     auth_service = AuthService(db)
     deleted_user = auth_service.delete_user(current_user.id)
-    return deleted_user
+    return UserDeleteResponse(message="User account deleted successfully", deleted_count=1)

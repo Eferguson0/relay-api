@@ -13,3 +13,8 @@ class ConversationRepository:
         self.db.commit()
         self.db.refresh(conversation)
         return conversation
+
+    def get_all(self, user_id: str) -> List[ChatConversation]:
+        return self.db.query(ChatConversation).filter(
+            ChatConversation.user_id == user_id
+        ).order_by(ChatConversation.created_at.desc()).all()

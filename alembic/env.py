@@ -7,37 +7,10 @@ from alembic import context
 # Import settings after environment variables are loaded
 from app.core.config import settings
 from app.db.session import Base
-from app.models.auth.user import AuthUser
 
 # Import models to ensure they are registered with Base.metadata
-from app.models.enums import DataSource
-from app.models.goal.general import GoalGeneral
-from app.models.goal.macros import GoalMacros
-from app.models.metric.activity.miles import ActivityMiles
-from app.models.metric.activity.steps import ActivitySteps
-from app.models.metric.activity.workouts import ActivityWorkouts
-from app.models.metric.body.composition import BodyComposition
-from app.models.metric.body.heartrate import BodyHeartRate
-from app.models.metric.calories.active import CaloriesActive
-from app.models.metric.calories.baseline import CaloriesBaseline
-from app.models.metric.sleep.daily import SleepDaily
-from app.models.nutrition.macros import NutritionMacros
-
-_ = [
-    AuthUser,
-    DataSource,
-    GoalGeneral,
-    GoalMacros,
-    BodyComposition,
-    BodyHeartRate,
-    ActivitySteps,
-    ActivityMiles,
-    ActivityWorkouts,
-    CaloriesBaseline,
-    CaloriesActive,
-    SleepDaily,
-    NutritionMacros,
-]
+# Import from app.models to get all registered models automatically
+import app.models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

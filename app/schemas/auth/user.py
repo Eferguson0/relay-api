@@ -7,7 +7,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: str | None = None
+    user_id: str | None = None
 
 
 class UserCreate(BaseModel):
@@ -29,6 +29,12 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AuthEnvelopeOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 class UserUpdate(BaseModel):

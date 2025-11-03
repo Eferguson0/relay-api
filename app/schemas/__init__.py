@@ -96,6 +96,27 @@ from .metric.sleep.daily import (
 )
 
 # Nutrition schemas
+from .nutrition.consumption_logs import (
+    ConsumptionLogCreate,
+    ConsumptionLogCreateResponse,
+    ConsumptionLogDeleteResponse,
+    ConsumptionLogListResponse,
+    ConsumptionLogResponse,
+)
+from .nutrition.user_food_preferences import (
+    UserFoodPreferenceCreate,
+    UserFoodPreferenceCreateResponse,
+    UserFoodPreferenceDeleteResponse,
+    UserFoodPreferenceListResponse,
+    UserFoodPreferenceResponse,
+)
+from .nutrition.foods import (
+    FoodCreate,
+    FoodCreateResponse,
+    FoodDeleteResponse,
+    FoodListResponse,
+    FoodResponse,
+)
 from .nutrition.macros import (
     DailyAggregation,
     DailyAggregationResponse,
@@ -185,6 +206,21 @@ __all__ = [
     "SleepDailyDeleteResponse",
     "SleepDailyExportResponse",
     # Nutrition
+    "FoodCreate",
+    "FoodResponse",
+    "FoodListResponse",
+    "FoodCreateResponse",
+    "FoodDeleteResponse",
+    "UserFoodPreferenceCreate",
+    "UserFoodPreferenceResponse",
+    "UserFoodPreferenceListResponse",
+    "UserFoodPreferenceCreateResponse",
+    "UserFoodPreferenceDeleteResponse",
+    "ConsumptionLogCreate",
+    "ConsumptionLogResponse",
+    "ConsumptionLogListResponse",
+    "ConsumptionLogCreateResponse",
+    "ConsumptionLogDeleteResponse",
     "MacroDataPoint",
     "NutritionMacrosIngestRequest",
     "NutritionMacrosIngestResponse",

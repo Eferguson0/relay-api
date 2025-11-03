@@ -1,11 +1,11 @@
 from sqlalchemy import (
     Column,
-    DateTime,
     ForeignKey,
+    DateTime,
     Numeric,
     String,
-    Text,
     Boolean,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -14,22 +14,21 @@ from sqlalchemy.sql import func
 from app.db.session import Base
 
 
-class NutritionMacros(Base):
-    __tablename__ = "nutrition_macros"
+class UserFoodPreference(Base):
+    __tablename__ = "food_preferences"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("auth_users.id"), nullable=False)
-    datetime = Column(DateTime(timezone=True), nullable=False)
-    food_name = Column(String, nullable=False)  # name of the food
-    calories = Column(Numeric, nullable=False)  # kcal
-    protein = Column(Numeric, nullable=True)  # grams
-    carbs = Column(Numeric, nullable=True)  # grams
-    fat = Column(Numeric, nullable=True)  # grams
+    food_id = Column(String, ForeignKey("foods.id"), nullable=False)
     is_saved = Column(Boolean, nullable=False, default=False)  # whether the food is saved
-    notes = Column(Text, nullable=True)  # Additional notes about the meal
+    serving_unit = Column(String, nullable=True)  # serving unit of the food
+    serving_size = Column(Numeric(10,2), nullable=True, default=1.0)  # serving size of the food
+    notes = Column(Text, nullable=True)  # Additional user notes about the food
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     user = relationship("AuthUser")
+    food = relationship("Food")
 
+    __table_args__ = (UniqueConstraint("user_id", "food_id", name="uix_user_food"),)

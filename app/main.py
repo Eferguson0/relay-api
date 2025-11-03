@@ -42,7 +42,7 @@ app.add_middleware(
 )
 
 # OAuth2 scheme for authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/signin")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # Commented out static files mounting since frontend/dist doesn't exist
 # app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")

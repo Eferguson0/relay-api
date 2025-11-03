@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class ChatRequest(BaseModel):
     message: str
@@ -13,9 +14,10 @@ class ConversationCreate(BaseModel):
 
 class ConversationResponse(BaseModel):
     id: str
+    user_id: str
     title: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     status: str
 
 class MessageCreate(BaseModel):
@@ -29,4 +31,4 @@ class MessageResponse(BaseModel):
     content: str
     role: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None

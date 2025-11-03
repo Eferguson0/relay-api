@@ -2,13 +2,18 @@ import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
-from app.schemas.auth.user import Token, UserCreate, UserResponse
+from app.schemas.auth.user import (
+    AuthEnvelopeOut,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+)
 from app.services.auth_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     AuthService,
@@ -17,11 +22,11 @@ from app.services.auth_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/login", tags=["auth-login"])
+router = APIRouter(prefix="", tags=["auth-login"])
 
 
-@router.post("/",
-    response_model=Token,
+@router.post("/login",
+    response_model=AuthEnvelopeOut,
     summary="User login endpoint",
     description="Login a user and return an access token",
     responses={
@@ -33,15 +38,15 @@ router = APIRouter(prefix="/login", tags=["auth-login"])
     }
 )
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    payload: UserLogin,
     db: Session = Depends(get_db)
 ):
-    logger.info(f"Attempting login for user: {form_data.username}")
+    logger.info(f"Attempting login for user: {payload.email}")
     auth_service = AuthService(db)
     try:
-        user = auth_service.authenticate_user(form_data.username, form_data.password)
+        user = auth_service.authenticate_user(payload.email, payload.password)
         if not user:
-            logger.warning(f"Failed login attempt for user: {form_data.username}")
+            logger.warning(f"Failed login attempt for user: {payload.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
@@ -49,10 +54,10 @@ async def login(
             )
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = auth_service.create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
+            data={"sub": user.id}, expires_delta=access_token_expires
         )
         logger.info(f"Successful login for user: {user.email}")
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer", "user": user}
     except HTTPException:
         raise
     except ValueError as e:
@@ -76,7 +81,7 @@ async def login(
 
 
 @router.post("/signup",
-    response_model=UserResponse,
+    response_model=AuthEnvelopeOut,
     status_code=status.HTTP_201_CREATED,
     summary="User signup endpoint",
     description="Create a new user account",
@@ -105,8 +110,12 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
             password=user_data.password,
             full_name=user_data.full_name
         )
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = auth_service.create_access_token(
+            data={"sub": user.id}, expires_delta=access_token_expires
+        )
         logger.info(f"Successful signup for user: {user.email}")
-        return user
+        return {"access_token": access_token, "token_type": "bearer", "user": user}
     except ValueError as e:
         logger.error(f"Value error during signup: {str(e)}")
         raise HTTPException(

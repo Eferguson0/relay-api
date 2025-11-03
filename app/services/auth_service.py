@@ -47,7 +47,11 @@ class AuthService:
 
 
     def get_user_by_email(self, email: str) -> Optional[AuthUser]:
-        return self.db.query(AuthUser).filter(AuthUser.email == email).first()
+        return self.repository.get_by_email(email)
+
+
+    def get_user_by_id(self, user_id: str) -> Optional[AuthUser]:
+        return self.repository.get_by_id(user_id)
 
 
     def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -71,13 +75,13 @@ class AuthService:
 
 
     def verify_token(self, token: str) -> Optional[str]:
-        """Verify JWT token and return the email if valid"""
+        """Verify JWT token and return the user ID if valid"""
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email: str | None = payload.get("sub")
-            if email is None:
+            user_id: str | None = payload.get("sub")
+            if user_id is None:
                 return None
-            return email
+            return user_id
         except JWTError:
             return None
 
@@ -126,13 +130,14 @@ def get_current_user(
 
     try:
         token = credentials.credentials
-        email = verify_token(token)
-        if email is None:
+        auth_service = AuthService(db)
+        user_id = auth_service.verify_token(token)
+        if user_id is None:
             raise credentials_exception
     except Exception:
         raise credentials_exception
 
-    user = get_user_by_email(db, email=email)
+    user = auth_service.get_user_by_id(user_id)
     if user is None:
         raise credentials_exception
 

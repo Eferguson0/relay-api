@@ -72,3 +72,7 @@ class ChatService:
             status="active"
         )
         return self.conversation_repository.create(new_conversation)
+
+    def get_all_conversations(self, user_id: str) -> List[ChatConversation]:
+        """Get all conversations for a user"""
+        return self.conversation_repository.get_all(user_id)

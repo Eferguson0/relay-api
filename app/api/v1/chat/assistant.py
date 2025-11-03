@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
-from app.schemas.chat.assistant import ChatRequest, ChatResponse
+from app.schemas.chat.assistant import ChatRequest, ChatResponse, ConversationResponse, MessageResponse
 from app.services.openai_service import get_chat_completion
 from app.services.chat_service import ChatService
 from app.services.auth_service import get_current_user
@@ -22,6 +22,44 @@ SYSTEM_PROMPT = (
 )
 
 router = APIRouter(prefix="/assistant", tags=["chat-assistant"])
+
+@router.get("/conversations",
+    response_model=list[ConversationResponse],
+    summary="Get all conversations endpoint",
+    description="Get all conversations",
+    responses={
+        200: {"description": "Conversations retrieved successfully"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def get_conversations(
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_user),
+):
+    """Get all conversations"""
+    chat_service = ChatService(db)
+    conversations = chat_service.get_all_conversations(current_user.id)
+    return conversations
+
+
+@router.get("/conversations/{conversation_id}/messages",
+    response_model=list[MessageResponse],
+    summary="Get all messages endpoint",
+    description="Get all messages",
+    responses={
+        200: {"description": "Messages retrieved successfully"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def get_messages(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_user),
+):
+    """Get all messages"""
+    chat_service = ChatService(db)
+    messages = chat_service.get_conversation_messages(conversation_id)
+    return messages
 
 
 @router.post("/",
