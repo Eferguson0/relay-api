@@ -15,7 +15,6 @@ from .metric.calories.baseline import CaloriesBaseline
 from .metric.sleep.daily import SleepDaily
 from .nutrition.macros import NutritionMacros
 from .nutrition.foods import Food
-from .nutrition.user_food_preferences import UserFoodPreference
 from .nutrition.consumption_logs import ConsumptionLog
 
 __all__ = [
@@ -35,6 +34,5 @@ __all__ = [
     "SleepDaily",
     "NutritionMacros",
     "Food",
-    "UserFoodPreference",
     "ConsumptionLog",
 ]

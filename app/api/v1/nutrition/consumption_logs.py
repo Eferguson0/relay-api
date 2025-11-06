@@ -1,12 +1,12 @@
 import logging
 import traceback
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.datetime_utils import parse_iso_datetime
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
 from app.schemas.nutrition.consumption_logs import (
@@ -15,6 +15,7 @@ from app.schemas.nutrition.consumption_logs import (
     ConsumptionLogDeleteResponse,
     ConsumptionLogListResponse,
     ConsumptionLogResponse,
+    ConsumptionLogUpdate,
 )
 from app.services.auth_service import get_current_active_user
 from app.services.nutrition_service import NutritionService
@@ -56,14 +57,8 @@ async def list_consumption_logs(
     try:
         nutrition_service = NutritionService(db)
 
-        parsed_start = (
-            datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            if start_date
-            else None
-        )
-        parsed_end = (
-            datetime.fromisoformat(end_date.replace("Z", "+00:00")) if end_date else None
-        )
+        parsed_start = parse_iso_datetime(start_date) if start_date else None
+        parsed_end = parse_iso_datetime(end_date) if end_date else None
 
         logs, total_count = nutrition_service.list_consumption_logs(
             user_id=current_user.id,
@@ -124,6 +119,8 @@ async def create_consumption_log(
             message="Consumption log created successfully",
             log=ConsumptionLogResponse.model_validate(log),
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(
             f"Error creating consumption log for user {current_user.id}: {exc}"
@@ -190,7 +187,7 @@ async def get_consumption_log(
 )
 async def update_consumption_log(
     log_id: str,
-    log_data: ConsumptionLogCreate,
+    log_data: ConsumptionLogUpdate,
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ) -> ConsumptionLogResponse:

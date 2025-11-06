@@ -12,6 +12,7 @@ from app.schemas.nutrition.foods import (
     FoodDeleteResponse,
     FoodListResponse,
     FoodResponse,
+    FoodUpdate,
 )
 from app.services.auth_service import get_current_active_user
 from app.services.nutrition_service import NutritionService
@@ -153,7 +154,7 @@ async def get_food(
 )
 async def update_food(
     food_id: str,
-    food_data: FoodCreate,
+    food_data: FoodUpdate,
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ) -> FoodResponse:

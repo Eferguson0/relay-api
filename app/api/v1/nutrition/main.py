@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.nutrition import macros, foods, consumption_logs, user_food_preferences
+from app.api.v1.nutrition import macros, foods, consumption_logs
 
 # Create the nutrition router
 router = APIRouter(prefix="/nutrition")
@@ -9,4 +9,3 @@ router = APIRouter(prefix="/nutrition")
 router.include_router(macros.router)
 router.include_router(foods.router)
 router.include_router(consumption_logs.router)
-router.include_router(user_food_preferences.router)

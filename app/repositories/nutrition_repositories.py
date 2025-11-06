@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.nutrition.macros import NutritionMacros
 from app.models.nutrition.foods import Food
 from app.models.nutrition.consumption_logs import ConsumptionLog
-from app.models.nutrition.user_food_preferences import UserFoodPreference
 
 class NutritionRepository:
     def __init__(self, db: Session):
@@ -124,9 +123,9 @@ class NutritionRepository:
     ) -> int:
         query = self.db.query(ConsumptionLog).filter(ConsumptionLog.user_id == user_id)
         if start_date:
-            query = query.filter(ConsumptionLog.datetime >= start_date)
+            query = query.filter(ConsumptionLog.logged_at >= start_date)
         if end_date:
-            query = query.filter(ConsumptionLog.datetime <= end_date)
+            query = query.filter(ConsumptionLog.logged_at <= end_date)
         return query.count()
 
     def list_consumption_logs(
@@ -144,11 +143,11 @@ class NutritionRepository:
         )
 
         if start_date:
-            query = query.filter(ConsumptionLog.datetime >= start_date)
+            query = query.filter(ConsumptionLog.logged_at >= start_date)
         if end_date:
-            query = query.filter(ConsumptionLog.datetime <= end_date)
+            query = query.filter(ConsumptionLog.logged_at <= end_date)
 
-        query = query.order_by(ConsumptionLog.datetime.desc())
+        query = query.order_by(ConsumptionLog.logged_at.desc())
         
         if limit is not None:
             query = query.limit(limit)
@@ -181,74 +180,4 @@ class NutritionRepository:
 
     def delete_consumption_log(self, log: ConsumptionLog) -> None:
         self.db.delete(log)
-        self.db.commit()
-
-
-    # User food preference helpers
-
-    def count_user_food_preferences(
-        self,
-        user_id: str,
-        is_saved: Optional[bool] = None,
-    ) -> int:
-        query = self.db.query(UserFoodPreference).filter(UserFoodPreference.user_id == user_id)
-        if is_saved is not None:
-            query = query.filter(UserFoodPreference.is_saved == is_saved)
-        return query.count()
-
-    def list_user_food_preferences(
-        self,
-        user_id: str,
-        is_saved: Optional[bool] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[UserFoodPreference]:
-        query = (
-            self.db.query(UserFoodPreference)
-            .options(joinedload(UserFoodPreference.food))
-            .filter(UserFoodPreference.user_id == user_id)
-        )
-
-        if is_saved is not None:
-            query = query.filter(UserFoodPreference.is_saved == is_saved)
-
-        query = query.order_by(UserFoodPreference.created_at.desc())
-        
-        if limit is not None:
-            query = query.limit(limit)
-        if offset is not None:
-            query = query.offset(offset)
-        
-        return query.all()
-
-    def get_user_food_preference(
-        self, user_id: str, food_id: str
-    ) -> Optional[UserFoodPreference]:
-        return (
-            self.db.query(UserFoodPreference)
-            .options(joinedload(UserFoodPreference.food))
-            .filter(
-                UserFoodPreference.user_id == user_id,
-                UserFoodPreference.food_id == food_id,
-            )
-            .one_or_none()
-        )
-
-    def create_user_food_preference(
-        self, preference: UserFoodPreference
-    ) -> UserFoodPreference:
-        self.db.add(preference)
-        self.db.commit()
-        self.db.refresh(preference)
-        return preference
-
-    def update_user_food_preference(
-        self, preference: UserFoodPreference
-    ) -> UserFoodPreference:
-        self.db.commit()
-        self.db.refresh(preference)
-        return preference
-
-    def delete_user_food_preference(self, preference: UserFoodPreference) -> None:
-        self.db.delete(preference)
         self.db.commit()

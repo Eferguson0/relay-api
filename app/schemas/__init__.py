@@ -103,13 +103,6 @@ from .nutrition.consumption_logs import (
     ConsumptionLogListResponse,
     ConsumptionLogResponse,
 )
-from .nutrition.user_food_preferences import (
-    UserFoodPreferenceCreate,
-    UserFoodPreferenceCreateResponse,
-    UserFoodPreferenceDeleteResponse,
-    UserFoodPreferenceListResponse,
-    UserFoodPreferenceResponse,
-)
 from .nutrition.foods import (
     FoodCreate,
     FoodCreateResponse,
@@ -211,11 +204,6 @@ __all__ = [
     "FoodListResponse",
     "FoodCreateResponse",
     "FoodDeleteResponse",
-    "UserFoodPreferenceCreate",
-    "UserFoodPreferenceResponse",
-    "UserFoodPreferenceListResponse",
-    "UserFoodPreferenceCreateResponse",
-    "UserFoodPreferenceDeleteResponse",
     "ConsumptionLogCreate",
     "ConsumptionLogResponse",
     "ConsumptionLogListResponse",
