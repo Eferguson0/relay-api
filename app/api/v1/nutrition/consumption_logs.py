@@ -16,6 +16,7 @@ from app.schemas.nutrition.consumption_logs import (
     ConsumptionLogListResponse,
     ConsumptionLogResponse,
     ConsumptionLogUpdate,
+    DailyConsumptionAggregation,
 )
 from app.services.auth_service import get_current_active_user
 from app.services.nutrition_service import NutritionService
@@ -260,3 +261,54 @@ async def delete_consumption_log(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error deleting consumption log",
         ) from exc
+
+
+@router.get("/daily/{date}",
+    response_model=DailyConsumptionAggregation,
+    summary="Get daily consumption log records",
+    description="Get all consumption log records for a specific day. Requires ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00). The date portion will be extracted from the ISO datetime string.",
+    responses={
+        200: {"description": "Daily consumption log records retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "No consumption log records found for the given date"},
+        500: {"description": "Internal server error"},
+    }
+)
+async def get_daily_consumption_log_records(
+    date: str,  # Format: ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00)
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Get all consumption log records for a specific day. Requires ISO datetime string with timezone."""
+    try:
+        
+        nutrition_service = NutritionService(db)
+        data = nutrition_service.get_daily_consumption_logs_data(current_user.id, date)
+        if not data.records:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No consumption log records found for the given date",
+            )
+        
+        return DailyConsumptionAggregation(
+            date=date,
+            total_calories=data.total_calories,
+            total_protein=data.total_protein,
+            total_carbs=data.total_carbs,
+            total_fat=data.total_fat,
+            log_count=len(data.records),
+            logs=[ConsumptionLogResponse.model_validate(record) for record in data.records],
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid date format. Use YYYY-MM-DD",
+        )
+    except Exception as e:
+        logger.error(f"Error fetching daily consumption log records: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching daily records: {str(e)}",
+        )

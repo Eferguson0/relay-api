@@ -181,3 +181,14 @@ class NutritionRepository:
     def delete_consumption_log(self, log: ConsumptionLog) -> None:
         self.db.delete(log)
         self.db.commit()
+
+    def get_consumption_log_macros_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, food_name: Optional[str] = None) -> List[ConsumptionLog]:
+        query = self.db.query(ConsumptionLog).filter(ConsumptionLog.user_id == user_id)
+        if start_date:
+            query = query.filter(ConsumptionLog.logged_at >= start_date)
+        if end_date:
+            query = query.filter(ConsumptionLog.logged_at <= end_date)
+        if food_name:
+            query = query.join(Food).filter(Food.name.ilike(f"%{food_name}%"))
+        records = query.order_by(ConsumptionLog.logged_at.desc()).all()
+        return records

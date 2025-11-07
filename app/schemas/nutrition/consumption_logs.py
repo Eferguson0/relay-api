@@ -90,3 +90,12 @@ class ConsumptionLogDeleteResponse(BaseModel):
     message: str
     deleted_count: int
 
+
+class DailyConsumptionAggregation(BaseModel):
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    total_calories: float
+    total_protein: Optional[float] = None
+    total_carbs: Optional[float] = None
+    total_fat: Optional[float] = None
+    log_count: int = 0
+    logs: List[ConsumptionLogResponse] = []

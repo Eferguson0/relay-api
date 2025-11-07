@@ -228,7 +228,7 @@ async def delete_macro_record(
 @router.get("/daily/{date}",
     response_model=DailyAggregation,
     summary="Get daily macro records",
-    description="Get daily macro records",
+    description="Get all macro records for a specific day. Requires ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00). The date portion will be extracted from the ISO datetime string.",
     responses={
         200: {"description": "Daily macro records retrieved successfully"},
         401: {"description": "Unauthorized"},
@@ -238,11 +238,11 @@ async def delete_macro_record(
     }
 )
 async def get_daily_macro_records(
-    date: str,  # Format: YYYY-MM-DD
+    date: str,  # Format: ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00)
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Get all macro records for a specific day"""
+    """Get all macro records for a specific day. Requires ISO datetime string with timezone."""
     try:
         
         nutrition_service = NutritionService(db)

@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.rid import generate_rid
-from app.core.datetime_utils import parse_iso_datetime
+from app.core.datetime_utils import parse_iso_datetime, get_day_boundaries_from_datetime
 from app.models.nutrition.macros import NutritionMacros
 from app.models.nutrition.foods import Food
 from app.models.nutrition.consumption_logs import ConsumptionLog
@@ -15,6 +15,7 @@ from app.schemas.nutrition.foods import FoodCreate, FoodUpdate
 from app.schemas.nutrition.consumption_logs import (
     ConsumptionLogCreate,
     ConsumptionLogUpdate,
+    DailyConsumptionAggregation,
 )
 from app.schemas.nutrition.macros import (
     DailyAggregation,
@@ -29,6 +30,15 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NutritionMacrosExport:
     records: List[NutritionMacros]
+    total_count: int
+    total_calories: float
+    total_protein: Optional[float] = None
+    total_carbs: Optional[float] = None
+    total_fat: Optional[float] = None
+
+@dataclass
+class ConsumptionLogExport:
+    records: List[ConsumptionLog]
     total_count: int
     total_calories: float
     total_protein: Optional[float] = None
@@ -204,6 +214,43 @@ class NutritionService:
         repository = NutritionRepository(self.db)
         repository.delete_consumption_log(log)
 
+    def get_daily_consumption_logs_data(self, user_id: str, date: str) -> ConsumptionLogExport:
+        nutrition_repository = NutritionRepository(self.db)
+        
+        # Parse the date and get UTC day boundaries
+        start_datetime, end_datetime = get_day_boundaries_from_datetime(date)
+        
+        records = nutrition_repository.get_consumption_log_macros_data(user_id, start_datetime, end_datetime, None)
+
+        total_calories, total_protein, total_carbs, total_fat = self._calculate_consumption_totals(records)
+
+        return ConsumptionLogExport(
+            records=records,
+            total_count=len(records),
+            total_calories=total_calories,  # Required field, can be 0.0
+            total_protein=total_protein if total_protein > 0 else None,
+            total_carbs=total_carbs if total_carbs > 0 else None,
+            total_fat=total_fat if total_fat > 0 else None,
+        )
+
+    def _calculate_consumption_totals(self, records: List[ConsumptionLog]) -> tuple:
+        """Helper method to calculate totals from consumption log records"""
+        total_calories = 0.0
+        total_protein = 0.0
+        total_carbs = 0.0
+        total_fat = 0.0
+
+        for record in records:
+            total_calories += float(record.calories_total)
+            if record.protein_total is not None:
+                total_protein += float(record.protein_total)
+            if record.carbs_total is not None:
+                total_carbs += float(record.carbs_total)
+            if record.fat_total is not None:
+                total_fat += float(record.fat_total)
+
+        return total_calories, total_protein, total_carbs, total_fat
+
 
     # Macro operations
     def get_macros_export_data(
@@ -233,10 +280,8 @@ class NutritionService:
     def get_daily_macros_data(self, user_id: str, date: str) -> NutritionMacrosExport:
         nutrition_repository = NutritionRepository(self.db)
         
-        # Parse the date
-        target_date = datetime.strptime(date, "%Y-%m-%d").date()
-        start_datetime = datetime.combine(target_date, datetime.min.time())
-        end_datetime = datetime.combine(target_date, datetime.max.time())
+        # Parse the date and get UTC day boundaries
+        start_datetime, end_datetime = get_day_boundaries_from_datetime(date)
         
         records = nutrition_repository.get_macros_data(user_id, start_datetime, end_datetime, None)
 
