@@ -7,6 +7,7 @@ from app.models.nutrition.macros import NutritionMacros
 from app.models.nutrition.foods import Food
 from app.models.nutrition.consumption_logs import ConsumptionLog
 
+# TODO: Reconcile transaction boundaries (commit/rollback) between services and repositories.
 class NutritionRepository:
     def __init__(self, db: Session):
         self.db = db

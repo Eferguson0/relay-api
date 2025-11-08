@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.chat.conversation import ChatConversation
 
+# TODO: Reconcile transaction boundaries (commit/rollback) between services and repositories.
 class ConversationRepository:
     def __init__(self, db: Session):
         self.db = db

@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -340,7 +340,7 @@ class NutritionService:
                 if record_data.notes is not None:
                     setattr(existing_record, "notes", record_data.notes)
                 setattr(existing_record, "is_saved", record_data.is_saved)
-                setattr(existing_record, "updated_at", datetime.utcnow())
+                setattr(existing_record, "updated_at", datetime.now(timezone.utc))
                 updated_record = nutrition_repository.update_macro_record(existing_record)
                 processed_records.append(updated_record)
                 updated_count += 1

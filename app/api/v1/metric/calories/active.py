@@ -5,10 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
-from app.models.metric.calories.active import CaloriesActive
 from app.schemas.metric.calories.active import (
     ActiveCaloriesExportRecord,
     ActiveCaloriesExportResponse,
@@ -18,13 +16,24 @@ from app.schemas.metric.calories.active import (
     CaloriesActiveResponse,
 )
 from app.services.auth_service import get_current_active_user
+from app.services.metrics_service import MetricsService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/active", tags=["metric-calories-active"])
 
 
-@router.get("/", response_model=ActiveCaloriesExportResponse)
+@router.get("/",
+    response_model=ActiveCaloriesExportResponse,
+    summary="Get active calories burn data endpoint",
+    description="Get active calories burn data",
+    responses={
+        200: {"description": "Active calories burn data retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def get_active_calories_burn(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -33,23 +42,27 @@ async def get_active_calories_burn(
 ):
     """Get active calories burn data"""
     try:
-        # Only show data for the authenticated user (security)
-        query = db.query(CaloriesActive).filter(
-            CaloriesActive.user_id == current_user.id
+        metrics_service = MetricsService(db)
+        records = metrics_service.get_active_calories_data(
+            current_user.id, start_date, end_date
         )
-
-        # Apply date filters if provided
-        if start_date:
-            query = query.filter(CaloriesActive.date_hour >= start_date)
-        if end_date:
-            query = query.filter(CaloriesActive.date_hour <= end_date)
-
-        # Execute query and convert to response objects
-        records = query.order_by(CaloriesActive.date_hour.desc()).all()
-
-        # Convert model objects to response objects
         response_records = [
-            ActiveCaloriesExportRecord.model_validate(record) for record in records
+            ActiveCaloriesExportRecord(
+                id=record.id,
+                user_id=record.user_id,
+                date_hour=record.date_hour.isoformat(),
+                calories_burned=float(record.calories_burned)
+                if record.calories_burned is not None
+                else None,
+                source=getattr(record.source, "value", record.source),
+                created_at=record.created_at.isoformat()
+                if record.created_at is not None
+                else None,
+                updated_at=record.updated_at.isoformat()
+                if record.updated_at is not None
+                else None,
+            )
+            for record in records
         ]
 
         return ActiveCaloriesExportResponse(
@@ -66,7 +79,17 @@ async def get_active_calories_burn(
         )
 
 
-@router.post("/bulk", response_model=CaloriesActiveBulkCreateResponse)
+@router.post("/bulk",
+    response_model=CaloriesActiveBulkCreateResponse,
+    summary="Create or update multiple active calories records (bulk upsert) endpoint",
+    description="Create or update multiple active calories records (bulk upsert)",
+    responses={
+        200: {"description": "Active calories records created or updated successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def create_or_update_multiple_active_calories_records(
     bulk_data: CaloriesActiveBulkCreate,
     db: Session = Depends(get_db),
@@ -74,48 +97,12 @@ async def create_or_update_multiple_active_calories_records(
 ):
     """Create or update multiple active calories records (bulk upsert)"""
     try:
-        created_count = 0
-        updated_count = 0
-        processed_records = []
-
-        for calories_data in bulk_data.records:
-            # Check if record already exists for this date and source
-            existing_record = (
-                db.query(CaloriesActive)
-                .filter(
-                    CaloriesActive.user_id == current_user.id,
-                    CaloriesActive.date_hour == calories_data.date_hour,
-                    CaloriesActive.source == calories_data.source,
-                )
-                .one_or_none()
+        metrics_service = MetricsService(db)
+        processed_records, created_count, updated_count = (
+            metrics_service.create_or_update_multiple_active_calories_records(
+                bulk_data, current_user.id
             )
-
-            if existing_record:
-                # Update existing record
-                if calories_data.calories_burned is not None:
-                    setattr(
-                        existing_record,
-                        "calories_burned",
-                        calories_data.calories_burned,
-                    )
-                setattr(existing_record, "updated_at", datetime.utcnow())
-                processed_records.append(existing_record)
-                updated_count += 1
-            else:
-                # Create new active calories record
-                new_record = CaloriesActive(
-                    id=generate_rid("metric", "active_calories"),
-                    user_id=current_user.id,
-                    date_hour=calories_data.date_hour,
-                    calories_burned=calories_data.calories_burned,
-                    source=calories_data.source,
-                )
-                db.add(new_record)
-                processed_records.append(new_record)
-                created_count += 1
-
-        # Commit all changes at once
-        db.commit()
+        )
 
         logger.info(
             f"Bulk processed {len(bulk_data.records)} active calories records for {current_user.id}: "
@@ -127,7 +114,10 @@ async def create_or_update_multiple_active_calories_records(
             created_count=created_count,
             updated_count=updated_count,
             total_processed=len(bulk_data.records),
-            records=processed_records,
+            records=[
+                CaloriesActiveResponse.model_validate(record)
+                for record in processed_records
+            ],
         )
 
     except Exception as e:
@@ -139,7 +129,17 @@ async def create_or_update_multiple_active_calories_records(
         )
 
 
-@router.get("/{record_id}", response_model=CaloriesActiveResponse)
+@router.get("/{record_id}",
+    response_model=CaloriesActiveResponse,
+    summary="Get a specific active calories record by ID endpoint",
+    description="Get a specific active calories record by ID",
+    responses={
+        200: {"description": "Active calories record retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Active calories record not found"},
+    },
+)
 async def get_active_calories_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -147,13 +147,9 @@ async def get_active_calories_record(
 ):
     """Get a specific active calories record by ID"""
     try:
-        record = (
-            db.query(CaloriesActive)
-            .filter(
-                CaloriesActive.id == record_id,
-                CaloriesActive.user_id == current_user.id,
-            )
-            .first()
+        metrics_service = MetricsService(db)
+        record = metrics_service.get_active_calories_record(
+            current_user.id, record_id
         )
 
         if not record:
@@ -165,7 +161,7 @@ async def get_active_calories_record(
         logger.info(
             f"Retrieved active calories record {record_id} for {current_user.id}"
         )
-        return record
+        return CaloriesActiveResponse.model_validate(record)
 
     except HTTPException:
         raise
@@ -177,7 +173,17 @@ async def get_active_calories_record(
         )
 
 
-@router.delete("/{record_id}", response_model=CaloriesActiveDeleteResponse)
+@router.delete("/{record_id}",
+    response_model=CaloriesActiveDeleteResponse,
+    summary="Delete an active calories record endpoint",
+    description="Delete an active calories record",
+    responses={
+        200: {"description": "Active calories record deleted successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Active calories record not found to delete"},
+    },
+)
 async def delete_active_calories_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -185,14 +191,9 @@ async def delete_active_calories_record(
 ):
     """Delete an active calories record"""
     try:
-        # Find and delete the record
-        record = (
-            db.query(CaloriesActive)
-            .filter(
-                CaloriesActive.id == record_id,
-                CaloriesActive.user_id == current_user.id,
-            )
-            .first()
+        metrics_service = MetricsService(db)
+        record = metrics_service.delete_active_calories_record(
+            current_user.id, record_id
         )
 
         if not record:
@@ -200,9 +201,6 @@ async def delete_active_calories_record(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Active calories record not found to delete",
             )
-
-        db.delete(record)
-        db.commit()
 
         logger.info(f"Deleted active calories record {record_id} for {current_user.id}")
         return CaloriesActiveDeleteResponse(

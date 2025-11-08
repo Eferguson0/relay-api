@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.goal.general import GoalGeneral
 from app.models.goal.macros import GoalMacros
 
+# TODO: Reconcile transaction boundaries (commit/rollback) between services and repositories.
 class GoalRepository:
     def __init__(self, db: Session):
         self.db = db

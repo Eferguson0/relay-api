@@ -3,21 +3,26 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import DataSource
+
 
 # Heart Rate Export Response Schema
 class HeartRateExportRecord(BaseModel):
     id: str
     user_id: str
-    date_hour: str
+    date_hour: datetime
     heart_rate: Optional[int]
     min_hr: Optional[int]
     avg_hr: Optional[float]
     max_hr: Optional[int]
     resting_hr: Optional[int]
     heart_rate_variability: Optional[float]
-    source: str
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    source: DataSource
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
 
 
 class HeartRateExportResponse(BaseModel):
@@ -45,7 +50,7 @@ class HeartRateCreate(BaseModel):
     heart_rate_variability: Optional[float] = Field(
         None, ge=0, description="Heart rate variability"
     )
-    source: str = Field(..., description="Source of the data")
+    source: DataSource = Field(..., description="Source of the data")
 
 
 class HeartRateResponse(BaseModel):
@@ -58,7 +63,7 @@ class HeartRateResponse(BaseModel):
     max_hr: Optional[int]
     resting_hr: Optional[int]
     heart_rate_variability: Optional[float]
-    source: str
+    source: DataSource
     created_at: datetime
     updated_at: Optional[datetime]
 

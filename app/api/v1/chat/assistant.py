@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
@@ -82,7 +82,7 @@ async def chat(
     
     """Handle chat messages"""
     # Log the incoming chat request with timestamp
-    timestamp = datetime.now().isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     logger.info(
         f"[{timestamp}] New chat message received - Length: {len(request.message)} characters"
     )

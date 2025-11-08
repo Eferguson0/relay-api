@@ -1,12 +1,19 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
+
+from app.models.enums import DataSource
 
 
 # Calories Baseline Schemas
 class CaloriesBaselineCreate(BaseModel):
-    date: datetime = Field(..., description="Date and time of measurement")
+    date_hour: datetime = Field(
+        ...,
+        description="Date and time of measurement",
+        serialization_alias="date",
+        validation_alias=AliasChoices("date", "date_hour"),
+    )
     baseline_calories: Optional[float] = Field(
         None, ge=0, description="Baseline calories burned"
     )
@@ -18,21 +25,26 @@ class CaloriesBaselineCreate(BaseModel):
         None,
         description="Activity level: sedentary, lightly_active, moderately_active, very_active, extremely_active",
     )
-    source: str = Field(..., description="Source of the data")
+    source: DataSource = Field(..., description="Source of the data")
 
 
 class CaloriesBaselineResponse(BaseModel):
     id: str
     user_id: str
-    date: datetime
+    date_hour: datetime = Field(
+        ...,
+        serialization_alias="date",
+        validation_alias=AliasChoices("date", "date_hour"),
+    )
     baseline_calories: Optional[float]
     bmr: Optional[float]
-    source: str
+    source: DataSource
     created_at: datetime
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 # Response schemas

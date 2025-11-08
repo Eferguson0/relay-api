@@ -1,12 +1,19 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
+
+from app.models.enums import DataSource
 
 
 # Sleep Daily Schemas
 class SleepDailyCreate(BaseModel):
-    sleep_date: datetime = Field(..., description="Date of sleep (start of sleep day)")
+    date_day: datetime = Field(
+        ...,
+        description="Date of sleep (start of sleep day)",
+        serialization_alias="sleep_date",
+        validation_alias=AliasChoices("sleep_date", "date_day"),
+    )
     bedtime: Optional[datetime] = Field(None, description="When user went to bed")
     wake_time: Optional[datetime] = Field(None, description="When user woke up")
     total_sleep_minutes: Optional[int] = Field(
@@ -30,14 +37,18 @@ class SleepDailyCreate(BaseModel):
     sleep_quality_score: Optional[int] = Field(
         None, ge=1, le=10, description="Sleep quality score (1-10)"
     )
-    source: str = Field(..., description="Source of the data")
+    source: DataSource = Field(..., description="Source of the data")
     notes: Optional[str] = Field(None, description="Additional notes about sleep")
 
 
 class SleepDailyResponse(BaseModel):
     id: str
     user_id: str
-    sleep_date: datetime
+    date_day: datetime = Field(
+        ...,
+        serialization_alias="sleep_date",
+        validation_alias=AliasChoices("sleep_date", "date_day"),
+    )
     bedtime: Optional[datetime]
     wake_time: Optional[datetime]
     total_sleep_minutes: Optional[int]
@@ -47,13 +58,14 @@ class SleepDailyResponse(BaseModel):
     awake_minutes: Optional[int]
     sleep_efficiency: Optional[float]
     sleep_quality_score: Optional[int]
-    source: str
+    source: DataSource
     notes: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 # Response schemas

@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
+
+from app.models.enums import DataSource
 
 
 # Body Composition Schemas
@@ -24,12 +26,20 @@ class BodyCompositionCreate(BaseModel):
         None, description="Measurement method (e.g., DEXA, BIA, Scale)"
     )
     notes: Optional[str] = Field(None, description="Additional notes")
+    source: DataSource = Field(
+        default=DataSource.MANUAL,
+        description="Source of the measurement data (defaults to manual)",
+    )
 
 
 class BodyCompositionResponse(BaseModel):
     id: str
     user_id: str
-    measurement_date: datetime
+    measurement_date: datetime = Field(
+        ...,
+        serialization_alias="measurement_date",
+        validation_alias=AliasChoices("measurement_date", "date_hour"),
+    )
     weight: Optional[float]
     body_fat_percentage: Optional[float]
     muscle_mass_percentage: Optional[float]
@@ -39,11 +49,13 @@ class BodyCompositionResponse(BaseModel):
     bmr: Optional[float]
     measurement_method: Optional[str]
     notes: Optional[str]
+    source: DataSource
     created_at: datetime
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 # Response schemas

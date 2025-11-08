@@ -5,10 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
-from app.models.metric.calories.baseline import CaloriesBaseline
 from app.schemas.metric.calories.baseline import (
     CaloriesBaselineBulkCreate,
     CaloriesBaselineBulkCreateResponse,
@@ -16,6 +14,7 @@ from app.schemas.metric.calories.baseline import (
     CaloriesBaselineResponse,
 )
 from app.services.auth_service import get_current_active_user
+from app.services.metrics_service import MetricsService
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,17 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[CaloriesBaselineResponse])
+@router.get("/",
+    response_model=list[CaloriesBaselineResponse],
+    summary="Get calories baseline data endpoint",
+    description="Get calories baseline data",
+    responses={
+        200: {"description": "Calories baseline data retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def get_calories_baseline(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -34,22 +43,17 @@ async def get_calories_baseline(
 ):
     """Get calories baseline data"""
     try:
-        query = db.query(CaloriesBaseline).filter(
-            CaloriesBaseline.user_id == current_user.id
+        metrics_service = MetricsService(db)
+        records = metrics_service.get_baseline_calories_data(
+            current_user.id, start_date, end_date
         )
-
-        # Apply date filters if provided
-        if start_date:
-            query = query.filter(CaloriesBaseline.date_hour >= start_date)
-        if end_date:
-            query = query.filter(CaloriesBaseline.date_hour <= end_date)
-
-        records = query.order_by(CaloriesBaseline.date_hour.desc()).all()
 
         logger.info(
             f"Retrieved {len(records)} calories baseline records for {current_user.id}"
         )
-        return records
+        return [
+            CaloriesBaselineResponse.model_validate(record) for record in records
+        ]
 
     except Exception as e:
         logger.error(f"Error retrieving calories baseline: {str(e)}")
@@ -59,7 +63,17 @@ async def get_calories_baseline(
         )
 
 
-@router.post("/bulk", response_model=CaloriesBaselineBulkCreateResponse)
+@router.post("/bulk",
+    response_model=CaloriesBaselineBulkCreateResponse,
+    summary="Create or update multiple baseline calories records (bulk upsert) endpoint",
+    description="Create or update multiple baseline calories records (bulk upsert)",
+    responses={
+        200: {"description": "Baseline calories records created or updated successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        500: {"description": "Internal server error"},
+    },
+)
 async def create_or_update_multiple_baseline_calories_records(
     bulk_data: CaloriesBaselineBulkCreate,
     db: Session = Depends(get_db),
@@ -67,51 +81,12 @@ async def create_or_update_multiple_baseline_calories_records(
 ):
     """Create or update multiple baseline calories records (bulk upsert)"""
     try:
-        created_count = 0
-        updated_count = 0
-        processed_records = []
-
-        for baseline_data in bulk_data.records:
-            # Check if record already exists for this date and source
-            existing_record = (
-                db.query(CaloriesBaseline)
-                .filter(
-                    CaloriesBaseline.user_id == current_user.id,
-                    CaloriesBaseline.date_hour == baseline_data.date,
-                    CaloriesBaseline.source == baseline_data.source,
-                )
-                .one_or_none()
+        metrics_service = MetricsService(db)
+        processed_records, created_count, updated_count = (
+            metrics_service.create_or_update_multiple_baseline_calories_records(
+                bulk_data, current_user.id
             )
-
-            if existing_record:
-                # Update existing record
-                if baseline_data.baseline_calories is not None:
-                    setattr(
-                        existing_record,
-                        "baseline_calories",
-                        baseline_data.baseline_calories,
-                    )
-                if baseline_data.bmr is not None:
-                    setattr(existing_record, "bmr", baseline_data.bmr)
-                setattr(existing_record, "updated_at", datetime.utcnow())
-                processed_records.append(existing_record)
-                updated_count += 1
-            else:
-                # Create new baseline calories record
-                new_record = CaloriesBaseline(
-                    id=generate_rid("metric", "calories_baseline"),
-                    user_id=current_user.id,
-                    date_hour=baseline_data.date,
-                    baseline_calories=baseline_data.baseline_calories,
-                    bmr=baseline_data.bmr,
-                    source=baseline_data.source,
-                )
-                db.add(new_record)
-                processed_records.append(new_record)
-                created_count += 1
-
-        # Commit all changes at once
-        db.commit()
+        )
 
         logger.info(
             f"Bulk processed {len(bulk_data.records)} baseline calories records for {current_user.id}: "
@@ -123,7 +98,10 @@ async def create_or_update_multiple_baseline_calories_records(
             created_count=created_count,
             updated_count=updated_count,
             total_processed=len(bulk_data.records),
-            records=processed_records,
+            records=[
+                CaloriesBaselineResponse.model_validate(record)
+                for record in processed_records
+            ],
         )
 
     except Exception as e:
@@ -135,7 +113,16 @@ async def create_or_update_multiple_baseline_calories_records(
         )
 
 
-@router.get("/{record_id}", response_model=CaloriesBaselineResponse)
+@router.get("/{record_id}", response_model=CaloriesBaselineResponse,
+    summary="Get a specific baseline calories record by ID endpoint",
+    description="Get a specific baseline calories record by ID",
+    responses={
+        200: {"description": "Baseline calories record retrieved successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Baseline calories record not found"},
+    },
+)
 async def get_calories_baseline_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -143,13 +130,9 @@ async def get_calories_baseline_record(
 ):
     """Get a specific calories baseline record by ID"""
     try:
-        record = (
-            db.query(CaloriesBaseline)
-            .filter(
-                CaloriesBaseline.id == record_id,
-                CaloriesBaseline.user_id == current_user.id,
-            )
-            .first()
+        metrics_service = MetricsService(db)
+        record = metrics_service.get_baseline_calories_record(
+            current_user.id, record_id
         )
 
         if not record:
@@ -161,7 +144,7 @@ async def get_calories_baseline_record(
         logger.info(
             f"Retrieved calories baseline record {record_id} for {current_user.id}"
         )
-        return record
+        return CaloriesBaselineResponse.model_validate(record)
 
     except HTTPException:
         raise
@@ -173,7 +156,17 @@ async def get_calories_baseline_record(
         )
 
 
-@router.delete("/{record_id}", response_model=CaloriesBaselineDeleteResponse)
+@router.delete("/{record_id}",
+    response_model=CaloriesBaselineDeleteResponse,
+    summary="Delete a baseline calories record endpoint",
+    description="Delete a baseline calories record",
+    responses={
+        200: {"description": "Baseline calories record deleted successfully"},
+        401: {"description": "Unauthorized"},
+        403: {"description": "Inactive user"},
+        404: {"description": "Baseline calories record not found to delete"},
+    },
+)
 async def delete_calories_baseline_record(
     record_id: str,
     db: Session = Depends(get_db),
@@ -181,14 +174,9 @@ async def delete_calories_baseline_record(
 ):
     """Delete a calories baseline record"""
     try:
-        # Find and delete the record
-        record = (
-            db.query(CaloriesBaseline)
-            .filter(
-                CaloriesBaseline.id == record_id,
-                CaloriesBaseline.user_id == current_user.id,
-            )
-            .first()
+        metrics_service = MetricsService(db)
+        record = metrics_service.delete_baseline_calories_record(
+            current_user.id, record_id
         )
 
         if not record:
@@ -196,9 +184,6 @@ async def delete_calories_baseline_record(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Calories baseline record not found to delete",
             )
-
-        db.delete(record)
-        db.commit()
 
         logger.info(
             f"Deleted calories baseline record {record_id} for {current_user.id}"

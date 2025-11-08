@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -136,7 +136,7 @@ class GoalService:
                 setattr(existing_goal, "fat", goal_data.fat)
             if goal_data.calorie_deficit is not None:
                 setattr(existing_goal, "calorie_deficit", goal_data.calorie_deficit)
-            setattr(existing_goal, "updated_at", datetime.utcnow())
+            setattr(existing_goal, "updated_at", datetime.now(timezone.utc))
             existing_goal = goal_repository.update_macro_goal(existing_goal)
             return GoalMacrosCreateResponse(
                 message="Macro goal updated successfully",

@@ -5,10 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.rid import generate_rid
 from app.db.session import get_db
 from app.models.auth.user import AuthUser
-from app.models.metric.sleep.daily import SleepDaily
 from app.schemas.metric.sleep.daily import (
     SleepDailyBulkCreate,
     SleepDailyBulkCreateResponse,
@@ -16,6 +14,7 @@ from app.schemas.metric.sleep.daily import (
     SleepDailyResponse,
 )
 from app.services.auth_service import get_current_active_user
+from app.services.metrics_service import MetricsService
 
 logger = logging.getLogger(__name__)
 
@@ -31,20 +30,15 @@ async def get_sleep_daily(
 ):
     """Get sleep daily data"""
     try:
-        query = db.query(SleepDaily).filter(SleepDaily.user_id == current_user.id)
-
-        # Apply date filters if provided
-        if start_date:
-            query = query.filter(SleepDaily.date_day >= start_date)
-        if end_date:
-            query = query.filter(SleepDaily.date_day <= end_date)
-
-        records = query.order_by(SleepDaily.date_day.desc()).all()
+        metrics_service = MetricsService(db)
+        records = metrics_service.get_sleep_daily_data(
+            current_user.id, start_date, end_date
+        )
 
         logger.info(
             f"Retrieved {len(records)} sleep daily records for {current_user.id}"
         )
-        return records
+        return [SleepDailyResponse.model_validate(record) for record in records]
 
     except Exception as e:
         logger.error(f"Error retrieving sleep daily: {str(e)}")
@@ -62,93 +56,12 @@ async def create_or_update_multiple_sleep_records(
 ):
     """Create or update multiple sleep records (bulk upsert)"""
     try:
-        created_count = 0
-        updated_count = 0
-        processed_records = []
-
-        for sleep_data in bulk_data.records:
-            # Check if record already exists for this date_day and source
-            existing_record = (
-                db.query(SleepDaily)
-                .filter(
-                    SleepDaily.user_id == current_user.id,
-                    SleepDaily.date_day == sleep_data.sleep_date,
-                    SleepDaily.source == sleep_data.source,
-                )
-                .one_or_none()
+        metrics_service = MetricsService(db)
+        processed_records, created_count, updated_count = (
+            metrics_service.create_or_update_multiple_sleep_daily_records(
+                bulk_data, current_user.id
             )
-
-            if existing_record:
-                # Update existing record
-                if sleep_data.bedtime is not None:
-                    setattr(existing_record, "bedtime", sleep_data.bedtime)
-                if sleep_data.wake_time is not None:
-                    setattr(existing_record, "wake_time", sleep_data.wake_time)
-                if sleep_data.total_sleep_minutes is not None:
-                    setattr(
-                        existing_record,
-                        "total_sleep_minutes",
-                        sleep_data.total_sleep_minutes,
-                    )
-                if sleep_data.deep_sleep_minutes is not None:
-                    setattr(
-                        existing_record,
-                        "deep_sleep_minutes",
-                        sleep_data.deep_sleep_minutes,
-                    )
-                if sleep_data.light_sleep_minutes is not None:
-                    setattr(
-                        existing_record,
-                        "light_sleep_minutes",
-                        sleep_data.light_sleep_minutes,
-                    )
-                if sleep_data.rem_sleep_minutes is not None:
-                    setattr(
-                        existing_record,
-                        "rem_sleep_minutes",
-                        sleep_data.rem_sleep_minutes,
-                    )
-                if sleep_data.awake_minutes is not None:
-                    setattr(existing_record, "awake_minutes", sleep_data.awake_minutes)
-                if sleep_data.sleep_efficiency is not None:
-                    setattr(
-                        existing_record, "sleep_efficiency", sleep_data.sleep_efficiency
-                    )
-                if sleep_data.sleep_quality_score is not None:
-                    setattr(
-                        existing_record,
-                        "sleep_quality_score",
-                        sleep_data.sleep_quality_score,
-                    )
-                if sleep_data.notes is not None:
-                    setattr(existing_record, "notes", sleep_data.notes)
-                setattr(existing_record, "updated_at", datetime.utcnow())
-                processed_records.append(existing_record)
-                updated_count += 1
-            else:
-                # Create new sleep record
-                new_record = SleepDaily(
-                    id=generate_rid("metric", "sleep_daily"),
-                    user_id=current_user.id,
-                    date_day=sleep_data.sleep_date,
-                    bedtime=sleep_data.bedtime,
-                    wake_time=sleep_data.wake_time,
-                    total_sleep_minutes=sleep_data.total_sleep_minutes,
-                    deep_sleep_minutes=sleep_data.deep_sleep_minutes,
-                    light_sleep_minutes=sleep_data.light_sleep_minutes,
-                    rem_sleep_minutes=sleep_data.rem_sleep_minutes,
-                    awake_minutes=sleep_data.awake_minutes,
-                    sleep_efficiency=sleep_data.sleep_efficiency,
-                    sleep_quality_score=sleep_data.sleep_quality_score,
-                    source=sleep_data.source,
-                    notes=sleep_data.notes,
-                )
-                db.add(new_record)
-                processed_records.append(new_record)
-                created_count += 1
-
-        # Commit all changes at once
-        db.commit()
+        )
 
         logger.info(
             f"Bulk processed {len(bulk_data.records)} sleep records for {current_user.id}: "
@@ -160,7 +73,9 @@ async def create_or_update_multiple_sleep_records(
             created_count=created_count,
             updated_count=updated_count,
             total_processed=len(bulk_data.records),
-            records=processed_records,
+            records=[
+                SleepDailyResponse.model_validate(record) for record in processed_records
+            ],
         )
 
     except Exception as e:
@@ -180,14 +95,8 @@ async def get_sleep_daily_record(
 ):
     """Get a specific sleep daily record by ID"""
     try:
-        record = (
-            db.query(SleepDaily)
-            .filter(
-                SleepDaily.id == record_id,
-                SleepDaily.user_id == current_user.id,
-            )
-            .first()
-        )
+        metrics_service = MetricsService(db)
+        record = metrics_service.get_sleep_daily_record(current_user.id, record_id)
 
         if not record:
             raise HTTPException(
@@ -196,7 +105,7 @@ async def get_sleep_daily_record(
             )
 
         logger.info(f"Retrieved sleep daily record {record_id} for {current_user.id}")
-        return record
+        return SleepDailyResponse.model_validate(record)
 
     except HTTPException:
         raise
@@ -216,24 +125,14 @@ async def delete_sleep_daily_record(
 ):
     """Delete a sleep daily record"""
     try:
-        # Find and delete the record
-        record = (
-            db.query(SleepDaily)
-            .filter(
-                SleepDaily.id == record_id,
-                SleepDaily.user_id == current_user.id,
-            )
-            .first()
-        )
+        metrics_service = MetricsService(db)
+        record = metrics_service.delete_sleep_daily_record(current_user.id, record_id)
 
         if not record:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Sleep daily record not found to delete",
             )
-
-        db.delete(record)
-        db.commit()
 
         logger.info(f"Deleted sleep daily record {record_id} for {current_user.id}")
         return SleepDailyDeleteResponse(

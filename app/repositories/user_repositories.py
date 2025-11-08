@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.auth.user import AuthUser
 from app.schemas.auth.user import UserUpdate
 
+# TODO: Reconcile transaction boundaries (commit/rollback) between services and repositories.
 class UserRepository:
     def __init__(self, db: Session):
         self.db = db

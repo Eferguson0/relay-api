@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from openai import AsyncOpenAI
 
@@ -29,10 +30,8 @@ async def get_chat_completion(messages: list, model: str = "gpt-3.5-turbo"):
         str: The completion text
     """
     try:
-        from datetime import datetime
-
         # Log the API call details
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         user_message = next(
             (msg["content"] for msg in messages if msg["role"] == "user"),
             "No user message found",

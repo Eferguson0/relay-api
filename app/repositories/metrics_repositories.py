@@ -1,13 +1,271 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List
+
 from app.models.metric.activity.miles import ActivityMiles
 from app.models.metric.activity.steps import ActivitySteps
 from app.models.metric.activity.workouts import ActivityWorkouts
+from app.models.metric.body.composition import BodyComposition
+from app.models.metric.body.heartrate import BodyHeartRate
+from app.models.metric.calories.active import CaloriesActive
+from app.models.metric.calories.baseline import CaloriesBaseline
+from app.models.metric.sleep.daily import SleepDaily
+from app.models.enums import DataSource
 
+# TODO: Reconcile transaction boundaries (commit/rollback) between services and repositories.
 class MetricsRepository:
     def __init__(self, db: Session):
         self.db = db
+
+# Body Composition Repository
+
+    def get_body_composition_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[BodyComposition]:
+        query = self.db.query(BodyComposition).filter(BodyComposition.user_id == user_id)
+        if start_date:
+            query = query.filter(BodyComposition.date_hour >= start_date)
+        if end_date:
+            query = query.filter(BodyComposition.date_hour <= end_date)
+        return query.order_by(BodyComposition.date_hour.desc()).all()
+
+    def get_body_composition_by_date_source(self, user_id: str, date_hour: datetime, source: DataSource) -> Optional[BodyComposition]:
+        return (
+            self.db.query(BodyComposition)
+                .filter(
+                    BodyComposition.user_id == user_id,
+                    BodyComposition.date_hour == date_hour,
+                    BodyComposition.source == source,
+                )
+                .one_or_none()
+        )
+
+    def create_body_composition_record(self, record: BodyComposition) -> BodyComposition:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def update_body_composition_record(self, record: BodyComposition) -> BodyComposition:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def get_body_composition_record(self, user_id: str, record_id: str) -> Optional[BodyComposition]:
+        return (
+            self.db.query(BodyComposition)
+            .filter(
+                BodyComposition.id == record_id,
+                BodyComposition.user_id == user_id,
+            )
+            .one_or_none()
+        )
+
+    def delete_body_composition_record(self, user_id: str, record_id: str) -> Optional[BodyComposition]:
+        record = self.get_body_composition_record(user_id, record_id)
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
+
+# Heart Rate Repository
+
+    def get_heart_rate_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[BodyHeartRate]:
+        query = self.db.query(BodyHeartRate).filter(BodyHeartRate.user_id == user_id)
+        if start_date:
+            query = query.filter(BodyHeartRate.date_hour >= start_date)
+        if end_date:
+            query = query.filter(BodyHeartRate.date_hour <= end_date)
+        return query.order_by(BodyHeartRate.date_hour.desc()).all()
+
+    def get_heart_rate_by_date_source(self, user_id: str, date_hour: datetime, source: DataSource) -> Optional[BodyHeartRate]:
+        return (
+            self.db.query(BodyHeartRate)
+            .filter(
+                BodyHeartRate.user_id == user_id,
+                BodyHeartRate.date_hour == date_hour,
+                BodyHeartRate.source == source,
+            )
+            .one_or_none()
+        )
+
+    def get_heart_rate_record(self, user_id: str, record_id: str) -> Optional[BodyHeartRate]:
+        return (
+            self.db.query(BodyHeartRate)
+            .filter(
+                BodyHeartRate.id == record_id,
+                BodyHeartRate.user_id == user_id,
+            )
+            .one_or_none()
+        )
+
+    def create_heart_rate_record(self, record: BodyHeartRate) -> BodyHeartRate:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def update_heart_rate_record(self, record: BodyHeartRate) -> BodyHeartRate:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def delete_heart_rate_record(self, user_id: str, record_id: str) -> Optional[BodyHeartRate]:
+        record = self.get_heart_rate_record(user_id, record_id)
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
+
+# Active Calories Repository
+
+    def get_active_calories_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[CaloriesActive]:
+        query = self.db.query(CaloriesActive).filter(CaloriesActive.user_id == user_id)
+        if start_date:
+            query = query.filter(CaloriesActive.date_hour >= start_date)
+        if end_date:
+            query = query.filter(CaloriesActive.date_hour <= end_date)
+        return query.order_by(CaloriesActive.date_hour.desc()).all()
+
+    def get_active_calories_by_date_source(self, user_id: str, date_hour: datetime, source: DataSource) -> Optional[CaloriesActive]:
+        return (
+            self.db.query(CaloriesActive)
+            .filter(
+                CaloriesActive.user_id == user_id,
+                CaloriesActive.date_hour == date_hour,
+                CaloriesActive.source == source,
+            )
+            .one_or_none()
+        )
+
+    def get_active_calories_record(self, user_id: str, record_id: str) -> Optional[CaloriesActive]:
+        return (
+            self.db.query(CaloriesActive)
+            .filter(
+                CaloriesActive.id == record_id,
+                CaloriesActive.user_id == user_id,
+            )
+            .one_or_none()
+        )
+
+    def create_active_calories_record(self, record: CaloriesActive) -> CaloriesActive:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def update_active_calories_record(self, record: CaloriesActive) -> CaloriesActive:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def delete_active_calories_record(self, user_id: str, record_id: str) -> Optional[CaloriesActive]:
+        record = self.get_active_calories_record(user_id, record_id)
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
+
+# Baseline Calories Repository
+
+    def get_baseline_calories_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[CaloriesBaseline]:
+        query = self.db.query(CaloriesBaseline).filter(CaloriesBaseline.user_id == user_id)
+        if start_date:
+            query = query.filter(CaloriesBaseline.date_hour >= start_date)
+        if end_date:
+            query = query.filter(CaloriesBaseline.date_hour <= end_date)
+        return query.order_by(CaloriesBaseline.date_hour.desc()).all()
+
+    def get_baseline_calories_by_date_source(self, user_id: str, date_hour: datetime, source: DataSource) -> Optional[CaloriesBaseline]:
+        return (
+            self.db.query(CaloriesBaseline)
+            .filter(
+                CaloriesBaseline.user_id == user_id,
+                CaloriesBaseline.date_hour == date_hour,
+                CaloriesBaseline.source == source,
+            )
+            .one_or_none()
+        )
+
+    def get_baseline_calories_record(self, user_id: str, record_id: str) -> Optional[CaloriesBaseline]:
+        return (
+            self.db.query(CaloriesBaseline)
+            .filter(
+                CaloriesBaseline.id == record_id,
+                CaloriesBaseline.user_id == user_id,
+            )
+            .one_or_none()
+        )
+
+    def create_baseline_calories_record(self, record: CaloriesBaseline) -> CaloriesBaseline:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def update_baseline_calories_record(self, record: CaloriesBaseline) -> CaloriesBaseline:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def delete_baseline_calories_record(self, user_id: str, record_id: str) -> Optional[CaloriesBaseline]:
+        record = self.get_baseline_calories_record(user_id, record_id)
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
+
+# Sleep Daily Repository
+
+    def get_sleep_daily_data(self, user_id: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[SleepDaily]:
+        query = self.db.query(SleepDaily).filter(SleepDaily.user_id == user_id)
+        if start_date:
+            query = query.filter(SleepDaily.date_day >= start_date)
+        if end_date:
+            query = query.filter(SleepDaily.date_day <= end_date)
+        return query.order_by(SleepDaily.date_day.desc()).all()
+
+    def get_sleep_daily_by_date_source(self, user_id: str, date_day: datetime, source: DataSource) -> Optional[SleepDaily]:
+        return (
+            self.db.query(SleepDaily)
+            .filter(
+                SleepDaily.user_id == user_id,
+                SleepDaily.date_day == date_day,
+                SleepDaily.source == source,
+            )
+            .one_or_none()
+        )
+
+    def get_sleep_daily_record(self, user_id: str, record_id: str) -> Optional[SleepDaily]:
+        return (
+            self.db.query(SleepDaily)
+            .filter(
+                SleepDaily.id == record_id,
+                SleepDaily.user_id == user_id,
+            )
+            .one_or_none()
+        )
+
+    def create_sleep_daily_record(self, record: SleepDaily) -> SleepDaily:
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def update_sleep_daily_record(self, record: SleepDaily) -> SleepDaily:
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def delete_sleep_daily_record(self, user_id: str, record_id: str) -> Optional[SleepDaily]:
+        record = self.get_sleep_daily_record(user_id, record_id)
+        if record:
+            self.db.delete(record)
+            self.db.commit()
+            return record
+        return None
 
 # Miles Repository
 

@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import DataSource
+
 
 # Active Calories Data Point Schema
 class ActiveCaloriesDataPoint(BaseModel):
@@ -65,7 +67,7 @@ class CaloriesActiveCreate(BaseModel):
         ..., description="Date and hour for the calories record"
     )
     calories_burned: Optional[float] = Field(None, ge=0, description="Calories burned")
-    source: str = Field(..., description="Source of the data")
+    source: DataSource = Field(..., description="Source of the data")
 
 
 class CaloriesActiveResponse(BaseModel):
@@ -73,7 +75,7 @@ class CaloriesActiveResponse(BaseModel):
     user_id: str
     date_hour: datetime
     calories_burned: Optional[float]
-    source: str
+    source: DataSource
     created_at: datetime
     updated_at: Optional[datetime]
 

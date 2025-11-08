@@ -228,30 +228,24 @@ async def delete_macro_record(
 @router.get("/daily/{date}",
     response_model=DailyAggregation,
     summary="Get daily macro records",
-    description="Get all macro records for a specific day. Requires ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00). The date portion will be extracted from the ISO datetime string.",
+    description="Get all macro records for a specific day. Requires ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00). The date portion will be extracted from the ISO datetime string. Returns zero values and empty meals array if no records exist for the day.",            
     responses={
-        200: {"description": "Daily macro records retrieved successfully"},
+        200: {"description": "Daily macro records retrieved successfully (may be empty)"},
         401: {"description": "Unauthorized"},
         403: {"description": "Inactive user"},
-        404: {"description": "No macro records found for the given date"},
         500: {"description": "Internal server error"},
     }
 )
 async def get_daily_macro_records(
-    date: str,  # Format: ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00)
+    date: str,  # Format: ISO datetime string with timezone (e.g., 2025-11-06T22:23:22Z or 2025-11-06T14:23:22-08:00)                                          
     db: Session = Depends(get_db),
     current_user: AuthUser = Depends(get_current_active_user),
 ):
-    """Get all macro records for a specific day. Requires ISO datetime string with timezone."""
+    """Get all macro records for a specific day. Requires ISO datetime string with timezone. Returns zero values if no records exist."""                                                                
     try:
         
         nutrition_service = NutritionService(db)
         data = nutrition_service.get_daily_macros_data(current_user.id, date)
-        if not data.records:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No macro records found for the given date",
-            )
         
         return DailyAggregation(
             date=date,
