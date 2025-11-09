@@ -30,6 +30,15 @@ from .goal.macros import (
     GoalMacrosUpdate,
     GoalMacrosUpdateResponse,
 )
+from .goal.templates import (
+    GoalTemplateBase,
+    GoalTemplateDefaults,
+    GoalTemplateListResponse,
+    GoalTemplatePaceMode,
+    GoalTemplateRead,
+    GoalTemplateSafety,
+    GoalTemplateTarget,
+)
 from .metric.activity.miles import (
     ActivityMilesCreate,
     ActivityMilesCreateResponse,
@@ -148,6 +157,13 @@ __all__ = [
     "GoalMacrosCreateResponse",
     "GoalMacrosUpdateResponse",
     "GoalMacrosDeleteResponse",
+    "GoalTemplateTarget",
+    "GoalTemplatePaceMode",
+    "GoalTemplateSafety",
+    "GoalTemplateBase",
+    "GoalTemplateDefaults",
+    "GoalTemplateRead",
+    "GoalTemplateListResponse",
     # Metric - Body
     "BodyCompositionCreate",
     "BodyCompositionResponse",
