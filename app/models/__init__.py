@@ -5,6 +5,7 @@ from .chat.message import ChatMessage
 from .enums import DataSource
 from .goal.general import GoalGeneral
 from .goal.macros import GoalMacros
+from .goal.templates import GoalTemplate
 from .metric.activity.miles import ActivityMiles
 from .metric.activity.steps import ActivitySteps
 from .metric.activity.workouts import ActivityWorkouts
@@ -24,6 +25,7 @@ __all__ = [
     "DataSource",
     "GoalGeneral",
     "GoalMacros",
+    "GoalTemplate",
     "BodyComposition",
     "BodyHeartRate",
     "ActivitySteps",
